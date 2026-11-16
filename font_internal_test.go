@@ -86,7 +86,7 @@ func TestDrawScreen(t *testing.T) {
 		}
 	}
 
-	img := DrawScreen(grid, pal)
+	img := drawScreen(grid, pal)
 	be.Equal(t, img.Bounds().Dx(), CanvasW)
 	be.Equal(t, img.Bounds().Dy(), CanvasH)
 
@@ -96,7 +96,7 @@ func TestDrawScreen(t *testing.T) {
 	for r := range custom {
 		custom[r] = make([]Cell, customCols)
 	}
-	customImg := DrawScreen(custom, pal)
+	customImg := drawScreen(custom, pal)
 	be.Equal(t, customImg.Bounds().Dx(), customCols*GlyphW)
 	be.Equal(t, customImg.Bounds().Dy(), customRows*GlyphH)
 }

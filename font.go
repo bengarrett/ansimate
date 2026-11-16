@@ -68,8 +68,8 @@ func drawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
 	}
 }
 
-// DrawScreen renders an entire grid of cells into a new NRGBA image.
-func DrawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
+// drawScreen renders an entire grid of cells into a new NRGBA image.
+func drawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
 	cols := Cols
 	rows := Rows
 	if len(grid) > 0 {
@@ -80,13 +80,13 @@ func DrawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
 	}
 
 	img := image.NewNRGBA(image.Rect(0, 0, cols*GlyphW, rows*GlyphH))
-	DrawScreenBuf(img, grid, pal)
+	drawScreenBuf(img, grid, pal)
 
 	return img
 }
 
-// DrawScreenBuf renders an entire grid of cells into an existing NRGBA image.
-func DrawScreenBuf(img *image.NRGBA, grid [][]Cell, pal [16]color.NRGBA) {
+// drawScreenBuf renders an entire grid of cells into an existing NRGBA image.
+func drawScreenBuf(img *image.NRGBA, grid [][]Cell, pal [16]color.NRGBA) {
 	for row, line := range grid {
 		for col, cell := range line {
 			drawCell(img, col, row, cell, pal)

@@ -164,7 +164,7 @@ func (a *animator) run(r io.Reader) error {
 }
 
 func (a *animator) addFrame(dur time.Duration) error {
-	img := DrawScreen(a.term.Grid(), a.cfg.Palette)
+	img := drawScreen(a.term.Grid(), a.cfg.Palette)
 	err := a.encoder.AddFrame(img, dur)
 	if err != nil {
 		return fmt.Errorf("add frame: %w", err)
@@ -181,7 +181,7 @@ func (a *animator) finalize() error {
 	}
 
 	if a.cfg.EndDelay > 0 {
-		img := DrawScreen(a.term.Grid(), a.cfg.Palette)
+		img := drawScreen(a.term.Grid(), a.cfg.Palette)
 		err := a.encoder.AddFrame(img, a.cfg.EndDelay)
 		if err != nil {
 			return fmt.Errorf("add final delay: %w", err)
