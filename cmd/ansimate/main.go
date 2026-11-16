@@ -32,7 +32,6 @@ type flags struct {
 	fps      int
 	delay    float64
 	maxSec   float64
-	ice      bool
 	lossy    bool
 	check    bool
 	ver      bool
@@ -95,7 +94,6 @@ func setupFlags(fs *flag.FlagSet, fl *flags) {
 	fs.IntVar(&fl.fps, "fps", defaultFPS, "Target animation frame rate (FPS)")
 	fs.Float64Var(&fl.delay, "delay", defaultEndDelay, "Seconds to hold final frame before looping")
 	fs.Float64Var(&fl.maxSec, "max", defaultMaxSec, "Maximum animation duration cap in seconds")
-	fs.BoolVar(&fl.ice, "ice", false, "Enable iCE high-intensity background colors")
 	fs.BoolVar(&fl.lossy, "lossy", false, "Enable lossy WebP compression (default is lossless)")
 	fs.BoolVar(&fl.check, "check", false, "Only detect if file is an ANSImation without converting")
 	fs.BoolVar(&fl.ver, "v", false, "Display version")
@@ -190,17 +188,11 @@ func reportDetection(w io.Writer, f *os.File, input string) {
 }
 
 func buildConfig(fl *flags) *ansimate.Config {
-	blinkMode := ansimate.BlinkOff
-	if fl.ice {
-		blinkMode = ansimate.BlinkICE
-	}
-
 	return &ansimate.Config{
 		BaudRate:    fl.baudRate,
 		FPS:         fl.fps,
 		MaxDuration: time.Duration(fl.maxSec * float64(time.Second)),
 		EndDelay:    time.Duration(fl.delay * float64(time.Second)),
-		Blink:       blinkMode,
 		Lossy:       fl.lossy,
 	}
 }
@@ -241,5 +233,5 @@ func printUsage(w io.Writer, fs *flag.FlagSet) {
 	fmt.Fprintln(w, "  ansimate animation.ans")
 	fmt.Fprintln(w, "  ansimate animation.ans output.webp")
 	fmt.Fprintln(w, "  ansimate -check animation.ans")
-	fmt.Fprintln(w, "  ansimate -baud 28800 -ice animation.ans")
+	fmt.Fprintln(w, "  ansimate -baud 28800 animation.ans")
 }

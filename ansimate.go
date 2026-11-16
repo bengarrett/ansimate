@@ -36,7 +36,6 @@ type Config struct {
 	EndDelay    time.Duration   // EndDelay is the duration held on the final frame before looping (default 2s).
 	Columns     int             // Columns is the terminal width in character cells (default 80).
 	Rows        int             // Rows is the terminal height in character cells (default 25).
-	Blink       BlinkMode       // Blink sets the interpretation of ANSI SGR 5 (BlinkOff, BlinkText, BlinkICE).
 	Lossy       bool            // Lossy enables lossy WebP compression (default false).
 	Palette     [16]color.NRGBA // Palette is the 16-color palette to use. If unset, DefaultPalette() is used.
 }
@@ -111,7 +110,7 @@ func (c *Config) animate(w io.Writer) *animator {
 	bytesPerTick := max(1, bytesPerSec/c.FPS)
 	tick := time.Second / time.Duration(c.FPS)
 
-	term := newTerminal(c.Columns, c.Rows, c.Blink)
+	term := newTerminal(c.Columns, c.Rows)
 	term.ResetDirty()
 
 	return &animator{

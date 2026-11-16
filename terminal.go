@@ -17,9 +17,7 @@ const (
 
 	sgrReset     = 0
 	sgrBold      = 1
-	sgrBlink     = 5
 	sgrBoldOff   = 22
-	sgrBlinkOff  = 25
 	sgrFGStart   = 30
 	sgrFGEnd     = 37
 	sgrFGDefault = 39
@@ -47,28 +45,26 @@ const (
 
 // terminal simulates a fixed-dimension character grid with ANSI escape code processing.
 type terminal struct {
-	grid      [][]cell
-	params    []int
-	cols      int
-	rows      int
-	x         int
-	y         int
-	savedX    int
-	savedY    int
-	curFG     byte
-	curBG     byte
-	bold      bool
-	blink     bool
-	lineWrap  bool
-	dirty     bool
-	state     parserState
-	curParam  int
-	hasParam  bool
-	blinkMode BlinkMode
+	grid     [][]cell
+	params   []int
+	cols     int
+	rows     int
+	x        int
+	y        int
+	savedX   int
+	savedY   int
+	curFG    byte
+	curBG    byte
+	bold     bool
+	lineWrap bool
+	dirty    bool
+	state    parserState
+	curParam int
+	hasParam bool
 }
 
-// newTerminal creates a new terminal instance with specified columns, rows, and blink mode.
-func newTerminal(cols, rows int, blink BlinkMode) *terminal {
+// newTerminal creates a new terminal instance with specified columns and rows.
+func newTerminal(cols, rows int) *terminal {
 	if cols <= 0 {
 		cols = Cols
 	}
@@ -77,14 +73,13 @@ func newTerminal(cols, rows int, blink BlinkMode) *terminal {
 	}
 
 	t := &terminal{
-		cols:      cols,
-		rows:      rows,
-		curFG:     defaultFGColor,
-		curBG:     defaultBGColor,
-		lineWrap:  true,
-		blinkMode: blink,
-		grid:      make([][]cell, rows),
-		params:    make([]int, 0, brightColorOffset),
+		cols:     cols,
+		rows:     rows,
+		curFG:    defaultFGColor,
+		curBG:    defaultBGColor,
+		lineWrap: true,
+		grid:     make([][]cell, rows),
+		params:   make([]int, 0, brightColorOffset),
 	}
 
 	t.Clear()
@@ -356,7 +351,6 @@ func (t *terminal) sgr() {
 
 func (t *terminal) resetAttrs() {
 	t.bold = false
-	t.blink = false
 	t.curFG = defaultFGColor
 	t.curBG = defaultBGColor
 }
@@ -374,12 +368,8 @@ func (t *terminal) applySGRStyle(param int) bool {
 		t.resetAttrs()
 	case sgrBold:
 		t.bold = true
-	case sgrBlink:
-		t.blink = true
 	case sgrBoldOff:
 		t.bold = false
-	case sgrBlinkOff:
-		t.blink = false
 	default:
 		return false
 	}
@@ -428,19 +418,11 @@ func (t *terminal) effectiveFG() byte {
 	return t.curFG
 }
 
-func (t *terminal) effectiveBG() byte {
-	if t.blink && t.blinkMode == BlinkICE && t.curBG < brightColorOffset {
-		return t.curBG + brightColorOffset
-	}
-
-	return t.curBG
-}
-
 func (t *terminal) writeChar(b byte) {
 	c := cell{
 		Char: b,
 		FG:   t.effectiveFG(),
-		BG:   t.effectiveBG(),
+		BG:   t.curBG,
 	}
 
 	t.grid[t.y][t.x] = c

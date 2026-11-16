@@ -25,11 +25,6 @@ func TestPalette(t *testing.T) {
 	be.Equal(t, pal[0], color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 	// White
 	be.Equal(t, pal[15], color.NRGBA{R: 255, G: 255, B: 255, A: 255})
-
-	be.Equal(t, BlinkOff.String(), "off")
-	be.Equal(t, BlinkText.String(), "blink")
-	be.Equal(t, BlinkICE.String(), "ice")
-	be.Equal(t, BlinkMode(99).String(), "unknown")
 }
 
 func TestDrawCell(t *testing.T) {

@@ -26,9 +26,6 @@ This document details the historical specifications, technical standards, extern
 - **CGA / EGA / VGA 16-Color RGB DAC Palette:**
   - **Standard:** Standard IBM 16-color PC palette (DAC color registers 0–15).
   - **Color 6 (Brown):** Utilizes the authentic IBM 5153 color display monitor DAC circuit adjustment (`#AA5500` / `RGB(170, 85, 0)`) rather than raw dark yellow (`#AAAA00` / `RGB(170, 170, 0)`).
-- **iCE Colors (High-Intensity Backgrounds):**
-  - **Origin:** *iCE Color* standard introduced in the 1990s BBS scene (popularized by ACiD Productions and iCE, and implemented in tools like *AcidView*, *TheDraw*, and custom BBS terminal drivers).
-  - **Behavior:** SGR code 5 (`\x1b[5m`) repurposes the hardware character blink attribute bit to access high-intensity bright backgrounds (colors 8–15) instead of causing character glyphs to blink.
 
 ---
 
@@ -44,7 +41,7 @@ This document details the historical specifications, technical standards, extern
     - **Erasure:** `CSI 2J` (Clear entire screen) and `CSI 2K` (Clear line)
     - **Cursor state:** `CSI s` (Save cursor position) and `CSI u` (Restore cursor position)
     - **Line wrapping:** `CSI ?7h` / `CSI =7h` (Wrap enable), `CSI ?7l` / `CSI =7l` (Wrap disable)
-    - **SGR attributes:** `CSI <n>m` (0 = reset, 1 = bold/bright, 5 = blink/iCE, 30–37 = foreground, 40–47 = background).
+    - **SGR attributes:** `CSI <n>m` (0 = reset, 1 = bold/bright, 30–37 = foreground, 40–47 = background).
 
 ---
 
@@ -93,7 +90,7 @@ This document details the historical specifications, technical standards, extern
 - [**`github.com/bengarrett/sauce`**](https://github.com/bengarrett/sauce):
   - Referenced for exact SAUCE record byte offsets, data type definitions (`DataType 1`), and file type values (`FileType 2`).
 - [**`github.com/bengarrett/ansibump`**](https://github.com/bengarrett/ansibump):
-  - Referenced for ANSI parsing conventions and the `BlinkMode` enum (`BlinkOff`, `BlinkText`, `BlinkICE`).
+  - Referenced for ANSI parsing conventions.
 
 ### External Tools & Architecture References
 - [**`AnsiLove/C`**](https://github.com/ansilove/ansilove) *(Stefan Vogt, Brian Cassidy, Frederic Cambus)*:

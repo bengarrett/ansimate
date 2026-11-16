@@ -33,28 +33,3 @@ var Palette = [16]color.NRGBA{
 	{R: c55, G: cff, B: cff, A: cff}, // 14: Bright Cyan
 	{R: cff, G: cff, B: cff, A: cff}, // 15: White
 }
-
-// BlinkMode defines how ANSI blink / SGR 5 is interpreted.
-type BlinkMode int
-
-const (
-	// BlinkOff disables blink and iCE high-intensity backgrounds.
-	BlinkOff BlinkMode = iota
-	// BlinkText interprets SGR 5 as blinking text (hidden on alternate frames).
-	BlinkText
-	// BlinkICE interprets SGR 5 as high-intensity background (iCE color mode).
-	BlinkICE
-)
-
-func (b BlinkMode) String() string {
-	switch b {
-	case BlinkOff:
-		return "off"
-	case BlinkText:
-		return "blink"
-	case BlinkICE:
-		return "ice"
-	default:
-		return "unknown"
-	}
-}

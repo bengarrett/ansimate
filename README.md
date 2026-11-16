@@ -11,7 +11,7 @@
 - **Modem Baud Rate Pacing:** Emulates realistic BBS streaming transmission rates (e.g., 9,600, 14,400, 19,200, or 28,800 baud) and frame ticks.
 - **Efficient Lossless Animated WebP:** Leverages pure-Go WebP encoding with sub-frame diffing (encoding only changed bounding boxes) and automatic identical frame merging.
 - **ANSImation Detection:** Fast heuristic and SAUCE detection to distinguish dynamic animations from static ANSI artwork without rasterization.
-- **Full ANSI & iCE Support:** Handles standard cursor positioning (`CSI H`), movements (`CSI A-D`), screen/line clearing (`CSI 2J`, `CSI 2K`), SGR colors, and iCE high-intensity backgrounds (`BlinkICE`).
+- **ANSI.SYS Terminal Support:** Handles standard cursor positioning (`CSI H`), movements (`CSI A-D`), screen/line clearing (`CSI 2J`, `CSI 2K`), and SGR colors.
 
 ## Quick Usage
 
@@ -67,7 +67,6 @@ cfg := &ansimate.Config{
 	FPS:         20,              // 20 frames per second
 	MaxDuration: 10 * time.Second,// Cap animation at 10s
 	EndDelay:    3 * time.Second, // Hold final completed frame for 3s
-	Blink:       ansimate.BlinkICE, // Interpret SGR 5 as iCE high-intensity background
 	Lossy:       false,           // Default false (pixel-perfect lossless WebP)
 }
 
