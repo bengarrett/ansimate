@@ -49,8 +49,21 @@ const (
 	a15 = 0xc0
 )
 
-// PaletteVGA contains the 16 standard CGA/VGA colors ordered by ANSI SGR color indices (0-15).
-var PaletteVGA = [16]color.NRGBA{
+var (
+	// PaletteVGA contains the 16 standard IBM CGA/VGA colors.
+	PaletteVGA = palettevga
+
+	// PaletteMono contains the 16-level IBM 8503 VGA monochrome paper-white grayscale palette.
+	PaletteMono = palettemono
+
+	// PaletteAmber contains the 16-level P134 amber phosphor CRT monochrome palette.
+	PaletteAmber = paletteamber
+
+	// PaletteGreen contains the 16-level IBM 5151 P39 green phosphor CRT monochrome palette.
+	PaletteGreen = palettegreen
+)
+
+var palettevga = [16]color.NRGBA{
 	{R: c00, G: c00, B: c00, A: cff}, // 0: Black
 	{R: caa, G: c00, B: c00, A: cff}, // 1: Red
 	{R: c00, G: caa, B: c00, A: cff}, // 2: Green
@@ -69,8 +82,7 @@ var PaletteVGA = [16]color.NRGBA{
 	{R: cff, G: cff, B: cff, A: cff}, // 15: White
 }
 
-// PaletteMono contains the 16-level IBM 8503 VGA Monochrome paper-white grayscale palette.
-var PaletteMono = [16]color.NRGBA{
+var palettemono = [16]color.NRGBA{
 	{R: m00, G: m00, B: m00, A: cff}, // 0: Black
 	{R: m01, G: m01, B: m01, A: cff}, // 1: Red
 	{R: m02, G: m02, B: m02, A: cff}, // 2: Green
@@ -89,8 +101,7 @@ var PaletteMono = [16]color.NRGBA{
 	{R: m15, G: m15, B: m15, A: cff}, // 15: White
 }
 
-// PaletteAmber contains the 16-level P134 Amber phosphor CRT monochrome palette.
-var PaletteAmber = [16]color.NRGBA{
+var paletteamber = [16]color.NRGBA{
 	{R: m00, G: c00, B: c00, A: cff}, // 0: Black
 	{R: m01, G: a01, B: c00, A: cff}, // 1: Red
 	{R: m02, G: a02, B: c00, A: cff}, // 2: Green
@@ -109,8 +120,7 @@ var PaletteAmber = [16]color.NRGBA{
 	{R: m15, G: a15, B: c00, A: cff}, // 15: White
 }
 
-// PaletteGreen contains the 16-level IBM 5151 P39 Green phosphor CRT monochrome palette.
-var PaletteGreen = [16]color.NRGBA{
+var palettegreen = [16]color.NRGBA{
 	{R: c00, G: m00, B: c00, A: cff}, // 0: Black
 	{R: c00, G: m01, B: c00, A: cff}, // 1: Red
 	{R: c00, G: m02, B: c00, A: cff}, // 2: Green
