@@ -21,8 +21,8 @@ func TestDetectEmpty(t *testing.T) {
 	be.Err(t, err, nil)
 	be.Equal(t, isAnim, false)
 
-	be.Equal(t, ansimate.DetectBytes(nil), false)
-	be.Equal(t, ansimate.DetectBytes([]byte{}), false)
+	be.Equal(t, ansimate.DetectB(nil), false)
+	be.Equal(t, ansimate.DetectB([]byte{}), false)
 }
 
 func TestDetectStaticANSI(t *testing.T) {
@@ -84,9 +84,9 @@ func TestDetectSAUCE(t *testing.T) {
 
 	// SAUCE DataType 1 (Character), FileType 2 (AnsiMation)
 	sauceAnim := append([]byte("ANSI content"), createRecord(1, 2)...)
-	be.Equal(t, ansimate.DetectBytes(sauceAnim), true)
+	be.Equal(t, ansimate.DetectB(sauceAnim), true)
 
 	// SAUCE DataType 1 (Character), FileType 1 (Static ANSI)
 	sauceStatic := append([]byte("ANSI content"), createRecord(1, 1)...)
-	be.Equal(t, ansimate.DetectBytes(sauceStatic), false)
+	be.Equal(t, ansimate.DetectB(sauceStatic), false)
 }

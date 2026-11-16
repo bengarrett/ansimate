@@ -34,11 +34,6 @@ var Palette = [16]color.NRGBA{
 	{R: cff, G: cff, B: cff, A: cff}, // 15: White
 }
 
-// DefaultPalette returns a copy of the standard CGA/VGA 16-color palette.
-func DefaultPalette() [16]color.NRGBA {
-	return Palette
-}
-
 // BlinkMode defines how ANSI blink / SGR 5 is interpreted.
 type BlinkMode int
 

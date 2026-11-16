@@ -10,22 +10,13 @@ import (
 var fontVGA8x16 []byte
 
 const (
-	// GlyphWidth is the pixel width of each 8x16 font character.
-	GlyphWidth = 8
-	// GlyphHeight is the pixel height of each 8x16 font character.
-	GlyphHeight = 16
-	// GlyphBytes is the byte length of each 8x16 font character bitmap.
-	GlyphBytes = 16
-	// FontGlyphs is the total number of characters in the CP437 font ROM.
-	FontGlyphs = 256
-	// DefaultColumns is the standard terminal width in character cells.
-	DefaultColumns = 80
-	// DefaultRows is the standard terminal height in character cells.
-	DefaultRows = 25
-	// CanvasWidth is the pixel width of a standard 80x25 text screen.
-	CanvasWidth = DefaultColumns * GlyphWidth
-	// CanvasHeight is the pixel height of a standard 80x25 text screen.
-	CanvasHeight = DefaultRows * GlyphHeight
+	GlyphW  = 8             // GlyphW is the pixel width of each 8x16 font character.
+	GlyphH  = 16            // GlyphH is the pixel height of each 8x16 font character.
+	GlyphL  = 16            // GlyphL is the byte length of each 8x16 font character bitmap.
+	Cols    = 80            // Cols is the standard terminal width in character cells.
+	Rows    = 25            // Rows is the standard terminal height in character cells.
+	CanvasW = Cols * GlyphW // CanvasW is the pixel width of a standard 80x25 text screen.
+	CanvasH = Rows * GlyphH // CanvasH is the pixel height of a standard 80x25 text screen.
 
 	bytesPerPixel = 4
 	offsetR       = 0
@@ -50,17 +41,17 @@ func DrawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
 	fg := pal[fgIdx]
 	bg := pal[bgIdx]
 
-	startX := col * GlyphWidth
-	startY := row * GlyphHeight
-	glyphOffset := int(cell.Char) * GlyphBytes
-	glyphData := fontVGA8x16[glyphOffset : glyphOffset+GlyphBytes]
+	startX := col * GlyphW
+	startY := row * GlyphH
+	glyphOffset := int(cell.Char) * GlyphL
+	glyphData := fontVGA8x16[glyphOffset : glyphOffset+GlyphL]
 
-	for y := range GlyphHeight {
+	for y := range GlyphH {
 		rowBits := glyphData[y]
 		imgY := startY + y
 		rowOffset := imgY * img.Stride
 
-		for x := range GlyphWidth {
+		for x := range GlyphW {
 			imgX := startX + x
 			pixOffset := rowOffset + imgX*bytesPerPixel
 
@@ -79,8 +70,8 @@ func DrawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
 
 // DrawScreen renders an entire grid of cells into a new NRGBA image.
 func DrawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
-	cols := DefaultColumns
-	rows := DefaultRows
+	cols := Cols
+	rows := Rows
 	if len(grid) > 0 {
 		rows = len(grid)
 		if len(grid[0]) > 0 {
@@ -88,7 +79,7 @@ func DrawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
 		}
 	}
 
-	img := image.NewNRGBA(image.Rect(0, 0, cols*GlyphWidth, rows*GlyphHeight))
+	img := image.NewNRGBA(image.Rect(0, 0, cols*GlyphW, rows*GlyphH))
 	DrawScreenBuf(img, grid, pal)
 
 	return img

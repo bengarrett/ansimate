@@ -22,7 +22,7 @@ const (
 	maxDetectBytes = 2 * 1024 * 1024 // 2 MB limit for stream detection
 )
 
-// Detect analyzes an ANSI stream from r and reports whether it is an ANSImation.
+// Detect analyzes the reader and reports whether it is an ANSI stream ANSImation.
 func Detect(r io.Reader) (bool, error) {
 	if r == nil {
 		return false, ErrNilReader
@@ -34,11 +34,11 @@ func Detect(r io.Reader) (bool, error) {
 		return false, fmt.Errorf("read: %w", err)
 	}
 
-	return DetectBytes(data), nil
+	return DetectB(data), nil
 }
 
-// DetectBytes inspects raw ANSI bytes and returns true if it represents an ANSImation.
-func DetectBytes(data []byte) bool {
+// DetectB inspects the bytes and returns true if it represents an ANSImation.
+func DetectB(data []byte) bool {
 	if len(data) == 0 {
 		return false
 	}
@@ -72,7 +72,7 @@ func checkSAUCE(data []byte) bool {
 }
 
 type detector struct {
-	grid       [DefaultRows][DefaultColumns]byte
+	grid       [Rows][Cols]byte
 	params     []int
 	x          int
 	y          int
@@ -149,8 +149,8 @@ func (d *detector) processControl(b byte) bool {
 
 func (d *detector) lineFeed() {
 	d.y++
-	if d.y >= DefaultRows {
-		d.y = DefaultRows - 1
+	if d.y >= Rows {
+		d.y = Rows - 1
 	}
 }
 
@@ -163,8 +163,8 @@ func (d *detector) backspace() {
 
 func (d *detector) tab() {
 	d.x = (d.x + tabStop) & ^(tabStop - 1)
-	if d.x >= DefaultColumns {
-		d.x = DefaultColumns - 1
+	if d.x >= Cols {
+		d.x = Cols - 1
 	}
 }
 
@@ -225,8 +225,8 @@ func (d *detector) cursorPosition() {
 		col = d.params[1]
 	}
 
-	newY := max(0, min(DefaultRows-1, row-1))
-	newX := max(0, min(DefaultColumns-1, col-1))
+	newY := max(0, min(Rows-1, row-1))
+	newX := max(0, min(Cols-1, col-1))
 
 	if newY < d.y || (newY == d.y && newX < d.x) {
 		d.backtracks++
@@ -270,7 +270,7 @@ func (d *detector) eraseDisplay() {
 }
 
 func (d *detector) writeChar(b byte) {
-	if d.y < DefaultRows && d.x < DefaultColumns {
+	if d.y < Rows && d.x < Cols {
 		existing := d.grid[d.y][d.x]
 		if existing != 0 && existing != asciiSpace {
 			d.overwrites++
@@ -279,11 +279,11 @@ func (d *detector) writeChar(b byte) {
 	}
 
 	d.x++
-	if d.x >= DefaultColumns {
+	if d.x >= Cols {
 		d.x = 0
 		d.y++
-		if d.y >= DefaultRows {
-			d.y = DefaultRows - 1
+		if d.y >= Rows {
+			d.y = Rows - 1
 		}
 	}
 }

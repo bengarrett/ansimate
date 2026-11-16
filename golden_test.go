@@ -43,7 +43,7 @@ func TestGoldenWebP(t *testing.T) {
 			be.Err(t, err, nil)
 
 			// 1. Verify ANSImation detection
-			isAnim := ansimate.DetectBytes(ansData)
+			isAnim := ansimate.DetectB(ansData)
 			be.True(t, isAnim)
 
 			// 2. Generate WebP into buffer

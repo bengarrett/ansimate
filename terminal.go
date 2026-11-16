@@ -70,10 +70,10 @@ type Terminal struct {
 // NewTerminal creates a new terminal instance with specified columns, rows, and blink mode.
 func NewTerminal(cols, rows int, blink BlinkMode) *Terminal {
 	if cols <= 0 {
-		cols = DefaultColumns
+		cols = Cols
 	}
 	if rows <= 0 {
-		rows = DefaultRows
+		rows = Rows
 	}
 
 	t := &Terminal{

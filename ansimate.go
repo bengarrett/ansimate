@@ -7,54 +7,38 @@ import (
 	"io"
 	"time"
 
-	// Register pure Go VP8 and VP8L encoders for WebP animation.
+	// Register VP8 and VP8L encoders for WebP animation.
 	_ "github.com/deepteams/webp"
 	"github.com/deepteams/webp/animation"
 )
 
 var (
-	// ErrNilWriter is returned when the target writer is nil.
 	ErrNilWriter = errors.New("writer is nil")
-	// ErrNilReader is returned when the source reader is nil.
 	ErrNilReader = errors.New("reader is nil")
-	// ErrEmpty is returned when the input stream produces no frames.
-	ErrEmpty = errors.New("input stream is empty")
+	ErrEmpty     = errors.New("input stream is empty")
 )
 
 const (
-	// DefaultBaudRate is the standard simulated BBS transmission speed.
-	DefaultBaudRate = 19200
-	// DefaultFPS is the default target frame rate.
-	DefaultFPS = 20
-	// DefaultMaxDuration is the maximum playback time before stopping.
-	DefaultMaxDuration = 15 * time.Second
-	// DefaultEndDelay is the pause time on the final frame before looping.
-	DefaultEndDelay = 2 * time.Second
+	DefaultBaudRate    = 19200            // DefaultBaudRate is the simulated BBS transmission speed, higher is faster.
+	DefaultFPS         = 20               // DefaultFPS is the default target frame rate.
+	DefaultMaxDuration = 30 * time.Second // DefaultMaxDuration is the maximum playback time before stopping.
+	DefaultEndDelay    = 2 * time.Second  // DefaultEndDelay is the pause time on the final frame before looping.
 
 	bitsPerByte = 10
 	maxFrames   = 500
 )
 
-// Config defines options for ANSImation to Animated WebP conversion.
+// Config defines options for the animated WebP conversion.
 type Config struct {
-	// BaudRate is the simulated transmission speed in bits per second (default 19200).
-	BaudRate int
-	// FPS is the target frames per second (default 20).
-	FPS int
-	// MaxDuration is the maximum playback duration before capping (default 15s).
-	MaxDuration time.Duration
-	// EndDelay is the duration held on the final frame before looping (default 2s).
-	EndDelay time.Duration
-	// Columns is the terminal width in character cells (default 80).
-	Columns int
-	// Rows is the terminal height in character cells (default 25).
-	Rows int
-	// Blink sets the interpretation of ANSI SGR 5 (BlinkOff, BlinkText, BlinkICE).
-	Blink BlinkMode
-	// Lossy enables lossy WebP compression (default false, meaning 100% pixel-perfect lossless).
-	Lossy bool
-	// Palette is the 16-color palette to use. If unset, DefaultPalette() is used.
-	Palette [16]color.NRGBA
+	BaudRate    int             // BaudRate is the simulated transmission speed in bits per second (default 19200).
+	FPS         int             // FPS is the target frames per second (default 20).
+	MaxDuration time.Duration   // MaxDuration is the maximum playback duration before capping (default 30s).
+	EndDelay    time.Duration   // EndDelay is the duration held on the final frame before looping (default 2s).
+	Columns     int             // Columns is the terminal width in character cells (default 80).
+	Rows        int             // Rows is the terminal height in character cells (default 25).
+	Blink       BlinkMode       // Blink sets the interpretation of ANSI SGR 5 (BlinkOff, BlinkText, BlinkICE).
+	Lossy       bool            // Lossy enables lossy WebP compression (default false).
+	Palette     [16]color.NRGBA // Palette is the 16-color palette to use. If unset, DefaultPalette() is used.
 }
 
 func (c *Config) sanitize() {
@@ -71,18 +55,19 @@ func (c *Config) sanitize() {
 		c.EndDelay = DefaultEndDelay
 	}
 	if c.Columns <= 0 {
-		c.Columns = DefaultColumns
+		c.Columns = Cols
 	}
 	if c.Rows <= 0 {
-		c.Rows = DefaultRows
+		c.Rows = Rows
 	}
 	// Check if palette is uninitialized (alpha channel is 0)
 	if c.Palette[15].A == 0 {
-		c.Palette = DefaultPalette()
+		c.Palette = Palette
 	}
 }
 
-// Animate reads an ANSI animation from r and writes an animated WebP to w.
+// Animate reads an ANSI animation from the reader and writes it as a WebP animation.
+// The writer and readers are required, while the config is optional and can be left as nil.
 func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 	if w == nil {
 		return ErrNilWriter
@@ -97,51 +82,51 @@ func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 	}
 	c.sanitize()
 
-	anim := newAnimator(w, &c)
+	animation := c.animate(w)
 
-	return anim.run(r)
+	return animation.run(r)
 }
 
 type animator struct {
 	cfg          *Config
-	enc          *animation.AnimEncoder
+	encoder      *animation.AnimEncoder
 	term         *Terminal
-	tickDuration time.Duration
+	tick         time.Duration
 	bytesPerTick int
-	frameCount   int
+	frames       int
 }
 
-func newAnimator(w io.Writer, c *Config) *animator {
+func (c *Config) animate(w io.Writer) *animator {
 	opts := &animation.EncodeOptions{
 		LoopCount:       0,
 		Lossless:        !c.Lossy,
 		BackgroundColor: c.Palette[0],
 	}
 
-	canvasW := c.Columns * GlyphWidth
-	canvasH := c.Rows * GlyphHeight
-	enc := animation.NewEncoder(w, canvasW, canvasH, opts)
+	canvasW := c.Columns * GlyphW
+	canvasH := c.Rows * GlyphH
+	encoder := animation.NewEncoder(w, canvasW, canvasH, opts)
 
 	bytesPerSec := c.BaudRate / bitsPerByte
 	bytesPerTick := max(1, bytesPerSec/c.FPS)
-	tickDuration := time.Second / time.Duration(c.FPS)
+	tick := time.Second / time.Duration(c.FPS)
 
 	term := NewTerminal(c.Columns, c.Rows, c.Blink)
 	term.ResetDirty()
 
 	return &animator{
 		cfg:          c,
-		enc:          enc,
+		encoder:      encoder,
 		term:         term,
-		tickDuration: tickDuration,
+		tick:         tick,
 		bytesPerTick: bytesPerTick,
-		frameCount:   0,
+		frames:       0,
 	}
 }
 
 func (a *animator) run(r io.Reader) error {
 	buf := make([]byte, a.bytesPerTick)
-	var totalDuration time.Duration
+	var duration time.Duration
 	var bytesRead int
 
 	for {
@@ -150,11 +135,11 @@ func (a *animator) run(r io.Reader) error {
 			bytesRead += n
 			_, _ = a.term.Write(buf[:n])
 			if a.term.IsDirty() {
-				errAdd := a.addFrame(a.tickDuration)
+				errAdd := a.addFrame(a.tick)
 				if errAdd != nil {
 					return errAdd
 				}
-				totalDuration += a.tickDuration
+				duration += a.tick
 			}
 		}
 
@@ -166,7 +151,7 @@ func (a *animator) run(r io.Reader) error {
 			return fmt.Errorf("read: %w", err)
 		}
 
-		if totalDuration >= a.cfg.MaxDuration || a.frameCount >= maxFrames {
+		if duration >= a.cfg.MaxDuration || a.frames >= maxFrames {
 			break
 		}
 	}
@@ -180,30 +165,30 @@ func (a *animator) run(r io.Reader) error {
 
 func (a *animator) addFrame(dur time.Duration) error {
 	img := DrawScreen(a.term.Grid(), a.cfg.Palette)
-	err := a.enc.AddFrame(img, dur)
+	err := a.encoder.AddFrame(img, dur)
 	if err != nil {
 		return fmt.Errorf("add frame: %w", err)
 	}
-	a.frameCount++
+	a.frames++
 	a.term.ResetDirty()
 
 	return nil
 }
 
 func (a *animator) finalize() error {
-	if a.frameCount == 0 {
+	if a.frames == 0 {
 		return a.finalizeEmpty()
 	}
 
 	if a.cfg.EndDelay > 0 {
 		img := DrawScreen(a.term.Grid(), a.cfg.Palette)
-		err := a.enc.AddFrame(img, a.cfg.EndDelay)
+		err := a.encoder.AddFrame(img, a.cfg.EndDelay)
 		if err != nil {
 			return fmt.Errorf("add final delay: %w", err)
 		}
 	}
 
-	err := a.enc.Close()
+	err := a.encoder.Close()
 	if err != nil {
 		return fmt.Errorf("close encoder: %w", err)
 	}
@@ -221,7 +206,7 @@ func (a *animator) finalizeEmpty() error {
 		return err
 	}
 
-	err = a.enc.Close()
+	err = a.encoder.Close()
 	if err != nil {
 		return fmt.Errorf("close encoder: %w", err)
 	}

@@ -52,8 +52,8 @@ func TestAnimateBasic(t *testing.T) {
 	// Decode the generated animated WebP using deepteams/webp/animation
 	anim, err := animation.DecodeBytes(out.Bytes())
 	be.Err(t, err, nil)
-	be.Equal(t, anim.CanvasWidth, ansimate.CanvasWidth)
-	be.Equal(t, anim.CanvasHeight, ansimate.CanvasHeight)
+	be.Equal(t, anim.CanvasWidth, ansimate.CanvasW)
+	be.Equal(t, anim.CanvasHeight, ansimate.CanvasH)
 	be.Equal(t, anim.LoopCount, 0)
 	be.True(t, len(anim.Frames) >= 1)
 }
@@ -77,6 +77,6 @@ func TestAnimateCustomDimensions(t *testing.T) {
 
 	anim, err := animation.DecodeBytes(out.Bytes())
 	be.Err(t, err, nil)
-	be.Equal(t, anim.CanvasWidth, customCols*ansimate.GlyphWidth)
-	be.Equal(t, anim.CanvasHeight, customRows*ansimate.GlyphHeight)
+	be.Equal(t, anim.CanvasWidth, customCols*ansimate.GlyphW)
+	be.Equal(t, anim.CanvasHeight, customRows*ansimate.GlyphH)
 }
