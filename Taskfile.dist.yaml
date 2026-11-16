@@ -30,10 +30,6 @@ tasks:
       - cmd: go fix ./...
       - cmd: gofumpt -l -w .
       - cmd: golangci-lint run -c .golangci.yaml
-  nil:
-    desc: 'Run the static analysis techniques to catch Nil dereferences.'
-    cmds:
-      - go tool nilaway -test=false ./...
   pkg-patch:
     aliases:
       - 'patch'

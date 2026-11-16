@@ -73,3 +73,27 @@ cfg := &ansimate.Config{
 
 err := ansimate.Animate(output, input, cfg)
 ```
+
+## Command-Line Tool
+
+A standalone CLI is provided for converting files without writing Go code:
+
+```bash
+# Build the binary
+task build
+
+# Convert an ANSImation to WebP
+./ansimate animation.ans
+
+# Check whether a file is an ANSImation
+./ansimate -check animation.ans
+
+# Convert with custom baud rate and end pause delay
+./ansimate -baud 28800 -fps 20 -delay 3.0s animation.ans output.webp
+```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+Test artwork files located in `testdata/` remain the copyright of their respective authors and are included strictly for automated regression testing and format conformance. See [testdata/README.md](testdata/README.md) for full attributions.

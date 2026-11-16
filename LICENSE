@@ -19,3 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+------------------------------------------------------------------------------
+Third-Party Test Data Notice:
+Files located in the testdata/ directory (including .ANS art files and corresponding
+golden .webp renders) are copyright by their respective authors and groups. They are
+not covered by the MIT License above and are included strictly for automated regression
+testing, format validation, and historical preservation. See testdata/README.md
+for individual attributions.
+------------------------------------------------------------------------------
