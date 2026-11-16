@@ -26,6 +26,11 @@ This document details the historical specifications, technical standards, extern
 - **CGA / EGA / VGA 16-Color RGB DAC Palette:**
   - **Standard:** Standard IBM 16-color PC palette (DAC color registers 0–15).
   - **Color 6 (Brown):** Utilizes the authentic IBM 5153 color display monitor DAC circuit adjustment (`#AA5500` / `RGB(170, 85, 0)`) rather than raw dark yellow (`#AAAA00` / `RGB(170, 170, 0)`).
+- **IBM VGA BIOS Monochrome & Phosphor Palettes:**
+  - **Gray-Scale Summing (`INT 10h, AH=10h, AL=1Bh`):** When driving a monochrome VGA monitor (e.g., IBM 8503), the VGA BIOS sums the 16 DAC registers using NTSC luminance weights ($30\%\text{ R} + 59\%\text{ G} + 11\%\text{ B}$), mapping each SGR color index to a distinct 64-level grayscale intensity rather than 1-bit black-and-white.
+  - **`PaletteMono`:** IBM 8503 paper-white monochrome grayscale (`RGB(Y, Y, Y)`).
+  - **`PaletteAmber`:** Classic P134 Amber phosphor CRT monochrome (`RGB(Y, 0.75Y, 0)`).
+  - **`PaletteGreen`:** Classic IBM 5151 P39 Green phosphor CRT monochrome (`RGB(0, Y, 0)`).
 
 ---
 

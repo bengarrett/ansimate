@@ -28,6 +28,7 @@ var errNoInput = errors.New("no input file specified")
 
 type flags struct {
 	output   string
+	palette  string
 	baudRate int
 	fps      int
 	delay    float64
@@ -90,6 +91,7 @@ func run(w io.Writer, args ...string) error {
 func setupFlags(fs *flag.FlagSet, fl *flags) {
 	fs.StringVar(&fl.output, "o", "", "Destination WebP filename (defaults to <input>.webp)")
 	fs.StringVar(&fl.output, "output", "", "Destination WebP filename (defaults to <input>.webp)")
+	fs.StringVar(&fl.palette, "palette", "vga", "Color palette: vga, mono, amber, green")
 	fs.IntVar(&fl.baudRate, "baud", defaultBaudRate, "Simulated BBS modem baud rate")
 	fs.IntVar(&fl.fps, "fps", defaultFPS, "Target animation frame rate (FPS)")
 	fs.Float64Var(&fl.delay, "delay", defaultEndDelay, "Seconds to hold final frame before looping")
@@ -188,12 +190,23 @@ func reportDetection(w io.Writer, f *os.File, input string) {
 }
 
 func buildConfig(fl *flags) *ansimate.Config {
+	pal := ansimate.Palette
+	switch strings.ToLower(fl.palette) {
+	case "mono":
+		pal = ansimate.PaletteMono
+	case "amber":
+		pal = ansimate.PaletteAmber
+	case "green":
+		pal = ansimate.PaletteGreen
+	}
+
 	return &ansimate.Config{
 		BaudRate:    fl.baudRate,
 		FPS:         fl.fps,
 		MaxDuration: time.Duration(fl.maxSec * float64(time.Second)),
 		EndDelay:    time.Duration(fl.delay * float64(time.Second)),
 		Lossy:       fl.lossy,
+		Palette:     pal,
 	}
 }
 

@@ -63,11 +63,12 @@ if isAnimation {
 
 ```go
 cfg := &ansimate.Config{
-	BaudRate:    14400,           // 14.4k baud modem speed
-	FPS:         20,              // 20 frames per second
-	MaxDuration: 10 * time.Second,// Cap animation at 10s
-	EndDelay:    3 * time.Second, // Hold final completed frame for 3s
-	Lossy:       false,           // Default false (pixel-perfect lossless WebP)
+	BaudRate:    14400,                  // 14.4k baud modem speed
+	FPS:         20,                     // 20 frames per second
+	MaxDuration: 10 * time.Second,       // Cap animation at 10s
+	EndDelay:    3 * time.Second,        // Hold final completed frame for 3s
+	Lossy:       false,                  // Default false (pixel-perfect lossless WebP)
+	Palette:     ansimate.PaletteMono,   // Or PaletteAmber, PaletteGreen (defaults to VGA Palette)
 }
 
 err := ansimate.Animate(output, input, cfg)
@@ -87,8 +88,8 @@ task build
 # Check whether a file is an ANSImation
 ./ansimate -check animation.ans
 
-# Convert with custom baud rate and end pause delay
-./ansimate -baud 28800 -fps 20 -delay 3.0s animation.ans output.webp
+# Convert with custom baud rate, end pause delay, and monochrome palette
+./ansimate -baud 28800 -fps 20 -delay 3.0s -palette mono animation.ans output.webp
 ```
 
 ## License

@@ -25,6 +25,21 @@ func TestPalette(t *testing.T) {
 	be.Equal(t, pal[0], color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 	// White
 	be.Equal(t, pal[15], color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+
+	// IBM 8503 VGA Monochrome
+	be.Equal(t, len(PaletteMono), 16)
+	be.Equal(t, PaletteMono[0], color.NRGBA{R: 0, G: 0, B: 0, A: 255})
+	be.Equal(t, PaletteMono[15], color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+
+	// P134 Amber Phosphor
+	be.Equal(t, len(PaletteAmber), 16)
+	be.Equal(t, PaletteAmber[0], color.NRGBA{R: 0, G: 0, B: 0, A: 255})
+	be.Equal(t, PaletteAmber[15], color.NRGBA{R: 255, G: 192, B: 0, A: 255})
+
+	// IBM 5151 P39 Green Phosphor
+	be.Equal(t, len(PaletteGreen), 16)
+	be.Equal(t, PaletteGreen[0], color.NRGBA{R: 0, G: 0, B: 0, A: 255})
+	be.Equal(t, PaletteGreen[15], color.NRGBA{R: 0, G: 255, B: 0, A: 255})
 }
 
 func TestDrawCell(t *testing.T) {
