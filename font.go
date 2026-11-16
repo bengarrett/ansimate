@@ -34,8 +34,8 @@ type Cell struct {
 	BG   byte
 }
 
-// DrawCell renders a single character cell into the target image at the specified column and row.
-func DrawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
+// drawCell renders a single character cell into the target image at the specified column and row.
+func drawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
 	fgIdx := cell.FG & maxColorIdx
 	bgIdx := cell.BG & maxColorIdx
 	fg := pal[fgIdx]
@@ -89,7 +89,7 @@ func DrawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
 func DrawScreenBuf(img *image.NRGBA, grid [][]Cell, pal [16]color.NRGBA) {
 	for row, line := range grid {
 		for col, cell := range line {
-			DrawCell(img, col, row, cell, pal)
+			drawCell(img, col, row, cell, pal)
 		}
 	}
 }
