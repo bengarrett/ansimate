@@ -77,7 +77,7 @@ err := ansimate.Animate(output, input, cfg)
 
 A standalone program is provided for converting files without writing Go code.
 
-[Download the latest](releases/latest/), or:
+[Download the latest](https://github.com/bengarrett/ansimate/releases/latest), or:
 
 ```bash
 # Build the binary
