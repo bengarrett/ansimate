@@ -73,9 +73,11 @@ cfg := &ansimate.Config{
 err := ansimate.Animate(output, input, cfg)
 ```
 
-#### Command-Line Tool
+#### Command-line Tool
 
-A standalone CLI is provided for converting files without writing Go code:
+A standalone program is provided for converting files without writing Go code.
+
+[Download the latest](releases/latest/), or:
 
 ```bash
 # Build the binary
@@ -91,6 +93,10 @@ go build .
 # Convert with custom baud rate, end pause delay, and monochrome palette
 ./ansimate -baud 28800 -fps 20 -delay 3.0s -palette mono animation.ans output.webp
 ```
+
+### Examples
+
+Check out [`testdata/`](testdata/) for a number of WebP animations created by ansimate.
 
 ### License
 

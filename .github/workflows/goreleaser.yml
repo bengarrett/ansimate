@@ -50,6 +50,7 @@ jobs:
           ref: main
       - name: Update Homebrew formula
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           INPUT_VERSION: ${{ github.event.inputs.version }}
           FORCE_UPDATE: ${{ github.event.inputs.force_update }}
@@ -70,7 +71,7 @@ jobs:
           fi
 
           TAR_URL="https://github.com/bengarrett/ansimate/archive/refs/tags/v${VERSION}.tar.gz"
-          SHA=$(curl -fsSL "${TAR_URL}" | sha256sum | awk '{print $1}')
+          SHA=$(curl -fsSL --retry 5 --retry-delay 2 -H "Authorization: Bearer ${GITHUB_TOKEN}" "${TAR_URL}" | sha256sum | awk '{print $1}')
 
           sed -i "s|^  url \".*\"$|  url \"${TAR_URL}\"|" Formula/ansimate.rb
           sed -i "s|^  sha256 \".*\"$|  sha256 \"${SHA}\"|" Formula/ansimate.rb
