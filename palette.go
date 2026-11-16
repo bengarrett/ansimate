@@ -1,6 +1,6 @@
 // Package ansimate converts ANSI animations into animated WebP images.
 //
-//nolint:gochecknoglobals
+//nolint:gochecknoglobals,dupl
 package ansimate
 
 import (
@@ -49,8 +49,8 @@ const (
 	a15 = 0xc0
 )
 
-// Palette contains the 16 standard CGA/VGA colors ordered by ANSI SGR color indices (0-15).
-var Palette = [16]color.NRGBA{
+// PaletteVGA contains the 16 standard CGA/VGA colors ordered by ANSI SGR color indices (0-15).
+var PaletteVGA = [16]color.NRGBA{
 	{R: c00, G: c00, B: c00, A: cff}, // 0: Black
 	{R: caa, G: c00, B: c00, A: cff}, // 1: Red
 	{R: c00, G: caa, B: c00, A: cff}, // 2: Green

@@ -19,49 +19,70 @@ var (
 )
 
 const (
-	DefaultBaudRate    = 19200            // DefaultBaudRate is the simulated BBS transmission speed, higher is faster.
-	DefaultFPS         = 20               // DefaultFPS is the default target frame rate.
-	DefaultMaxDuration = 30 * time.Second // DefaultMaxDuration is the maximum playback time before stopping.
-	DefaultEndDelay    = 2 * time.Second  // DefaultEndDelay is the pause time on the final frame before looping.
+	BaudRate    = 19200            // BaudRate is the default simulated BBS transmission speed in bits per second.
+	FPS         = 20               // FPS is the default target frame rate.
+	MaxDuration = 30 * time.Second // MaxDuration is the default maximum playback time before stopping.
+	EndDelay    = 2 * time.Second  // EndDelay is the default pause time on the final frame before looping.
+	Cols        = 80               // Cols is the default terminal width in character cells.
+	Rows        = 25               // Rows is the default terminal height in character cells.
 
-	bitsPerByte = 10
-	maxFrames   = 500
+	bitsPerByte    = 10
+	maxFrames      = 500
+	minBaudRate    = 300              // Bell 103 300-baud modem floor.
+	maxBaudRate    = 115200           // PC 16550A UART hardware ceiling.
+	maxFPS         = 70               // VGA 80x25 text-mode 70 Hz vertical refresh rate ceiling.
+	maxDurationCap = 2 * time.Minute  // Bounds total CPU encoding time.
+	maxEndDelay    = 10 * time.Second // Prevents looping animations from appearing frozen.
+	maxCols        = 160              // Bounds per-frame RGBA memory allocation (SVGA text mode limit).
+	maxRows        = 100              // Bounds per-frame RGBA memory allocation (extended ANSI limit).
 )
 
 // Config defines options for the animated WebP conversion.
 type Config struct {
-	BaudRate    int             // BaudRate is the simulated transmission speed in bits per second (default 19200).
-	FPS         int             // FPS is the target frames per second (default 20).
-	MaxDuration time.Duration   // MaxDuration is the maximum playback duration before capping (default 30s).
-	EndDelay    time.Duration   // EndDelay is the duration held on the final frame before looping (default 2s).
-	Columns     int             // Columns is the terminal width in character cells (default 80).
-	Rows        int             // Rows is the terminal height in character cells (default 25).
+	BaudRate    int             // BaudRate is the simulated transmission speed in bps (default 19200, range 300–115200).
+	FPS         int             // FPS is the target frames per second (default 20, max 70).
+	MaxDuration time.Duration   // MaxDuration is the maximum playback duration (default 30s, max 2m).
+	EndDelay    time.Duration   // EndDelay is the pause held on the final frame (default 2s, max 10s).
+	Columns     int             // Columns is the terminal width in character cells (default 80, max 160).
+	Rows        int             // Rows is the terminal height in character cells (default 25, max 100).
 	Lossy       bool            // Lossy enables lossy WebP compression (default false).
-	Palette     [16]color.NRGBA // Palette is the 16-color palette to use. If unset, DefaultPalette() is used.
+	Palette     [16]color.NRGBA // Palette is optional (default PaletteVGA).
 }
 
 func (c *Config) sanitize() {
 	if c.BaudRate <= 0 {
-		c.BaudRate = DefaultBaudRate
+		c.BaudRate = BaudRate
 	}
+	c.BaudRate = min(max(c.BaudRate, minBaudRate), maxBaudRate)
+
 	if c.FPS <= 0 {
-		c.FPS = DefaultFPS
+		c.FPS = FPS
 	}
+	c.FPS = min(c.FPS, maxFPS)
+
 	if c.MaxDuration <= 0 {
-		c.MaxDuration = DefaultMaxDuration
+		c.MaxDuration = MaxDuration
 	}
+	c.MaxDuration = min(c.MaxDuration, maxDurationCap)
+
 	if c.EndDelay <= 0 {
-		c.EndDelay = DefaultEndDelay
+		c.EndDelay = EndDelay
 	}
+	c.EndDelay = min(c.EndDelay, maxEndDelay)
+
 	if c.Columns <= 0 {
 		c.Columns = Cols
 	}
+	c.Columns = min(c.Columns, maxCols)
+
 	if c.Rows <= 0 {
 		c.Rows = Rows
 	}
+	c.Rows = min(c.Rows, maxRows)
+
 	// Check if palette is uninitialized (alpha channel is 0)
 	if c.Palette[15].A == 0 {
-		c.Palette = Palette
+		c.Palette = PaletteVGA
 	}
 }
 
@@ -102,8 +123,8 @@ func (c *Config) animate(w io.Writer) *animator {
 		BackgroundColor: c.Palette[0],
 	}
 
-	canvasW := c.Columns * GlyphW
-	canvasH := c.Rows * GlyphH
+	canvasW := c.Columns * glyphW
+	canvasH := c.Rows * glyphH
 	encoder := animation.NewEncoder(w, canvasW, canvasH, opts)
 
 	bytesPerSec := c.BaudRate / bitsPerByte

@@ -10,10 +10,10 @@ const (
 	asciiESC   = 0x1b
 	asciiSpace = 0x20
 
-	defaultFGColor    = 7
-	defaultBGColor    = 0
-	brightColorOffset = 8
-	tabStop           = 8
+	defaultFG    = 7
+	defaultBG    = 0
+	brightOffset = 8
+	tabStop      = 8
 
 	sgrReset     = 0
 	sgrBold      = 1
@@ -75,11 +75,11 @@ func newTerminal(cols, rows int) *terminal {
 	t := &terminal{
 		cols:     cols,
 		rows:     rows,
-		curFG:    defaultFGColor,
-		curBG:    defaultBGColor,
+		curFG:    defaultFG,
+		curBG:    defaultBG,
 		lineWrap: true,
 		grid:     make([][]cell, rows),
-		params:   make([]int, 0, brightColorOffset),
+		params:   make([]int, 0, brightOffset),
 	}
 
 	t.Clear()
@@ -89,7 +89,7 @@ func newTerminal(cols, rows int) *terminal {
 
 // Clear clears the terminal grid and resets the cursor to (0, 0).
 func (t *terminal) Clear() {
-	blank := cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
+	blank := cell{Char: ' ', FG: defaultFG, BG: defaultBG}
 	for r := range t.rows {
 		t.grid[r] = make([]cell, t.cols)
 		for c := range t.cols {
@@ -277,7 +277,7 @@ func (t *terminal) eraseDisplay() {
 		mode = t.params[0]
 	}
 
-	blank := cell{Char: ' ', FG: defaultFGColor, BG: t.curBG}
+	blank := cell{Char: ' ', FG: defaultFG, BG: t.curBG}
 
 	switch mode {
 	case eraseToEnd:
@@ -318,7 +318,7 @@ func (t *terminal) eraseLine() {
 		mode = t.params[0]
 	}
 
-	blank := cell{Char: ' ', FG: defaultFGColor, BG: t.curBG}
+	blank := cell{Char: ' ', FG: defaultFG, BG: t.curBG}
 
 	switch mode {
 	case eraseToEnd:
@@ -351,8 +351,8 @@ func (t *terminal) sgr() {
 
 func (t *terminal) resetAttrs() {
 	t.bold = false
-	t.curFG = defaultFGColor
-	t.curBG = defaultBGColor
+	t.curFG = defaultFG
+	t.curBG = defaultBG
 }
 
 func (t *terminal) applySGRParam(param int) {
@@ -389,9 +389,9 @@ func (t *terminal) applySGRFG(param int) bool {
 	case param >= sgrFGStart && param <= sgrFGEnd:
 		t.curFG = byte(param - sgrFGStart)
 	case param == sgrFGDefault:
-		t.curFG = defaultFGColor
+		t.curFG = defaultFG
 	case param >= sgrHiFGStart && param <= sgrHiFGEnd:
-		t.curFG = byte(param - sgrHiFGStart + brightColorOffset)
+		t.curFG = byte(param - sgrHiFGStart + brightOffset)
 	default:
 		return false
 	}
@@ -404,15 +404,15 @@ func (t *terminal) applySGRBG(param int) {
 	case param >= sgrBGStart && param <= sgrBGEnd:
 		t.curBG = byte(param - sgrBGStart)
 	case param == sgrBGDefault:
-		t.curBG = defaultBGColor
+		t.curBG = defaultBG
 	case param >= sgrHiBGStart && param <= sgrHiBGEnd:
-		t.curBG = byte(param - sgrHiBGStart + brightColorOffset)
+		t.curBG = byte(param - sgrHiBGStart + brightOffset)
 	}
 }
 
 func (t *terminal) effectiveFG() byte {
-	if t.bold && t.curFG < brightColorOffset {
-		return t.curFG + brightColorOffset
+	if t.bold && t.curFG < brightOffset {
+		return t.curFG + brightOffset
 	}
 
 	return t.curFG
@@ -448,7 +448,7 @@ func (t *terminal) lineFeed() {
 }
 
 func (t *terminal) scrollUp() {
-	blank := cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
+	blank := cell{Char: ' ', FG: defaultFG, BG: defaultBG}
 	for y := range t.rows - 1 {
 		copy(t.grid[y], t.grid[y+1])
 	}

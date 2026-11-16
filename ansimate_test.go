@@ -11,6 +11,8 @@ import (
 	"github.com/nalgeon/be"
 )
 
+const glyphW, glyphH = 8, 16
+
 func TestAnimateNil(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
@@ -52,8 +54,8 @@ func TestAnimateBasic(t *testing.T) {
 	// Decode the generated animated WebP using deepteams/webp/animation
 	anim, err := animation.DecodeBytes(out.Bytes())
 	be.Err(t, err, nil)
-	be.Equal(t, anim.CanvasWidth, ansimate.CanvasW)
-	be.Equal(t, anim.CanvasHeight, ansimate.CanvasH)
+	be.Equal(t, anim.CanvasWidth, ansimate.Cols*glyphW)
+	be.Equal(t, anim.CanvasHeight, ansimate.Rows*glyphH)
 	be.Equal(t, anim.LoopCount, 0)
 	be.True(t, len(anim.Frames) >= 1)
 }
@@ -77,6 +79,29 @@ func TestAnimateCustomDimensions(t *testing.T) {
 
 	anim, err := animation.DecodeBytes(out.Bytes())
 	be.Err(t, err, nil)
-	be.Equal(t, anim.CanvasWidth, customCols*ansimate.GlyphW)
-	be.Equal(t, anim.CanvasHeight, customRows*ansimate.GlyphH)
+	be.Equal(t, anim.CanvasWidth, customCols*glyphW)
+	be.Equal(t, anim.CanvasHeight, customRows*glyphH)
+}
+
+func TestAnimateClampedBounds(t *testing.T) {
+	t.Parallel()
+	const (
+		oversizedCols, oversizedRows = 500, 500
+		clampedCols, clampedRows     = 160, 100
+	)
+	ansiData := "\x1b[1;1HClamped bounds"
+
+	var out bytes.Buffer
+	cfg := &ansimate.Config{
+		Columns: oversizedCols,
+		Rows:    oversizedRows,
+	}
+
+	err := ansimate.Animate(&out, strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.Equal(t, anim.CanvasWidth, clampedCols*glyphW)
+	be.Equal(t, anim.CanvasHeight, clampedRows*glyphH)
 }

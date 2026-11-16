@@ -86,7 +86,7 @@ type detector struct {
 
 func checkHeuristics(data []byte) bool {
 	d := &detector{
-		params: make([]int, 0, brightColorOffset),
+		params: make([]int, 0, brightOffset),
 	}
 
 	return slices.ContainsFunc(data, d.processByte)

@@ -10,16 +10,16 @@ import (
 
 func TestFontData(t *testing.T) {
 	t.Parallel()
-	be.Equal(t, GlyphW, 8)
-	be.Equal(t, GlyphH, 16)
-	be.Equal(t, GlyphL, 16)
-	be.Equal(t, CanvasW, 640)
-	be.Equal(t, CanvasH, 400)
+	be.Equal(t, glyphW, 8)
+	be.Equal(t, glyphH, 16)
+	be.Equal(t, glyphL, 16)
+	be.Equal(t, canvasW, 640)
+	be.Equal(t, canvasH, 400)
 }
 
 func TestPalette(t *testing.T) {
 	t.Parallel()
-	pal := Palette
+	pal := PaletteVGA
 	be.Equal(t, len(pal), 16)
 	// Black
 	be.Equal(t, pal[0], color.NRGBA{R: 0, G: 0, B: 0, A: 255})
@@ -44,7 +44,7 @@ func TestPalette(t *testing.T) {
 
 func TestDrawCell(t *testing.T) {
 	t.Parallel()
-	pal := Palette
+	pal := PaletteVGA
 	img := image.NewNRGBA(image.Rect(0, 0, 16, 32))
 
 	const fgWhite = 15
@@ -58,8 +58,8 @@ func TestDrawCell(t *testing.T) {
 	}, pal)
 
 	// All 8x16 pixels of cell (0,0) should be foreground (White)
-	for y := range GlyphH {
-		for x := range GlyphW {
+	for y := range glyphH {
+		for x := range glyphW {
 			c := img.NRGBAAt(x, y)
 			be.Equal(t, c, pal[fgWhite])
 		}
@@ -73,9 +73,9 @@ func TestDrawCell(t *testing.T) {
 	}, pal)
 
 	// All 8x16 pixels of cell (1,0) should be background (Blue)
-	for y := range GlyphH {
-		for x := range GlyphW {
-			c := img.NRGBAAt(GlyphW+x, y)
+	for y := range glyphH {
+		for x := range glyphW {
+			c := img.NRGBAAt(glyphW+x, y)
 			be.Equal(t, c, pal[bgBlue])
 		}
 	}
@@ -83,7 +83,7 @@ func TestDrawCell(t *testing.T) {
 
 func TestDrawScreen(t *testing.T) {
 	t.Parallel()
-	pal := Palette
+	pal := PaletteVGA
 	grid := make([][]cell, Rows)
 	for r := range grid {
 		grid[r] = make([]cell, Cols)
@@ -97,8 +97,8 @@ func TestDrawScreen(t *testing.T) {
 	}
 
 	img := drawScreen(grid, pal)
-	be.Equal(t, img.Bounds().Dx(), CanvasW)
-	be.Equal(t, img.Bounds().Dy(), CanvasH)
+	be.Equal(t, img.Bounds().Dx(), canvasW)
+	be.Equal(t, img.Bounds().Dy(), canvasH)
 
 	// Custom size grid
 	const customRows, customCols = 10, 20
@@ -107,6 +107,6 @@ func TestDrawScreen(t *testing.T) {
 		custom[r] = make([]cell, customCols)
 	}
 	customImg := drawScreen(custom, pal)
-	be.Equal(t, customImg.Bounds().Dx(), customCols*GlyphW)
-	be.Equal(t, customImg.Bounds().Dy(), customRows*GlyphH)
+	be.Equal(t, customImg.Bounds().Dx(), customCols*glyphW)
+	be.Equal(t, customImg.Bounds().Dy(), customRows*glyphH)
 }

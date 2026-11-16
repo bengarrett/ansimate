@@ -190,7 +190,7 @@ func reportDetection(w io.Writer, f *os.File, input string) {
 }
 
 func buildConfig(fl *flags) *ansimate.Config {
-	pal := ansimate.Palette
+	pal := ansimate.PaletteVGA
 	switch strings.ToLower(fl.palette) {
 	case "mono":
 		pal = ansimate.PaletteMono

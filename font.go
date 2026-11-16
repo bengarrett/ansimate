@@ -10,13 +10,11 @@ import (
 var fontVGA8x16 []byte
 
 const (
-	GlyphW  = 8             // GlyphW is the pixel width of each 8x16 font character.
-	GlyphH  = 16            // GlyphH is the pixel height of each 8x16 font character.
-	GlyphL  = 16            // GlyphL is the byte length of each 8x16 font character bitmap.
-	Cols    = 80            // Cols is the standard terminal width in character cells.
-	Rows    = 25            // Rows is the standard terminal height in character cells.
-	CanvasW = Cols * GlyphW // CanvasW is the pixel width of a standard 80x25 text screen.
-	CanvasH = Rows * GlyphH // CanvasH is the pixel height of a standard 80x25 text screen.
+	glyphW  = 8             // glyphW is the pixel width of each 8x16 font character.
+	glyphH  = 16            // glyphH is the pixel height of each 8x16 font character.
+	glyphL  = 16            // glyphL is the byte length of each 8x16 font character bitmap.
+	canvasW = Cols * glyphW // canvasW is the pixel width of a standard 80x25 text screen.
+	canvasH = Rows * glyphH // canvasH is the pixel height of a standard 80x25 text screen.
 
 	bytesPerPixel = 4
 	offsetR       = 0
@@ -41,17 +39,17 @@ func drawCell(img *image.NRGBA, col, row int, c cell, pal [16]color.NRGBA) {
 	fg := pal[fgIdx]
 	bg := pal[bgIdx]
 
-	startX := col * GlyphW
-	startY := row * GlyphH
-	glyphOffset := int(c.Char) * GlyphL
-	glyphData := fontVGA8x16[glyphOffset : glyphOffset+GlyphL]
+	startX := col * glyphW
+	startY := row * glyphH
+	glyphOffset := int(c.Char) * glyphL
+	glyphData := fontVGA8x16[glyphOffset : glyphOffset+glyphL]
 
-	for y := range GlyphH {
+	for y := range glyphH {
 		rowBits := glyphData[y]
 		imgY := startY + y
 		rowOffset := imgY * img.Stride
 
-		for x := range GlyphW {
+		for x := range glyphW {
 			imgX := startX + x
 			pixOffset := rowOffset + imgX*bytesPerPixel
 
@@ -79,7 +77,7 @@ func drawScreen(grid [][]cell, pal [16]color.NRGBA) *image.NRGBA {
 		}
 	}
 
-	img := image.NewNRGBA(image.Rect(0, 0, cols*GlyphW, rows*GlyphH))
+	img := image.NewNRGBA(image.Rect(0, 0, cols*glyphW, rows*glyphH))
 	drawScreenBuf(img, grid, pal)
 
 	return img
