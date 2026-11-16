@@ -45,8 +45,8 @@ const (
 	stateCSIPrivate
 )
 
-// Terminal simulates a fixed-dimension character grid with ANSI escape code processing.
-type Terminal struct {
+// terminal simulates a fixed-dimension character grid with ANSI escape code processing.
+type terminal struct {
 	grid      [][]Cell
 	params    []int
 	cols      int
@@ -67,8 +67,8 @@ type Terminal struct {
 	blinkMode BlinkMode
 }
 
-// NewTerminal creates a new terminal instance with specified columns, rows, and blink mode.
-func NewTerminal(cols, rows int, blink BlinkMode) *Terminal {
+// newTerminal creates a new terminal instance with specified columns, rows, and blink mode.
+func newTerminal(cols, rows int, blink BlinkMode) *terminal {
 	if cols <= 0 {
 		cols = Cols
 	}
@@ -76,7 +76,7 @@ func NewTerminal(cols, rows int, blink BlinkMode) *Terminal {
 		rows = Rows
 	}
 
-	t := &Terminal{
+	t := &terminal{
 		cols:      cols,
 		rows:      rows,
 		curFG:     defaultFGColor,
@@ -93,7 +93,7 @@ func NewTerminal(cols, rows int, blink BlinkMode) *Terminal {
 }
 
 // Clear clears the terminal grid and resets the cursor to (0, 0).
-func (t *Terminal) Clear() {
+func (t *terminal) Clear() {
 	blank := Cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
 	for r := range t.rows {
 		t.grid[r] = make([]Cell, t.cols)
@@ -107,22 +107,22 @@ func (t *Terminal) Clear() {
 }
 
 // Grid returns the current 2D cell grid of the terminal.
-func (t *Terminal) Grid() [][]Cell {
+func (t *terminal) Grid() [][]Cell {
 	return t.grid
 }
 
 // IsDirty reports whether any cell on the screen has changed since the last ResetDirty.
-func (t *Terminal) IsDirty() bool {
+func (t *terminal) IsDirty() bool {
 	return t.dirty
 }
 
 // ResetDirty clears the dirty flag.
-func (t *Terminal) ResetDirty() {
+func (t *terminal) ResetDirty() {
 	t.dirty = false
 }
 
 // Write processes a byte slice of ANSI data.
-func (t *Terminal) Write(p []byte) (int, error) {
+func (t *terminal) Write(p []byte) (int, error) {
 	for _, b := range p {
 		t.processByte(b)
 	}
@@ -131,13 +131,13 @@ func (t *Terminal) Write(p []byte) (int, error) {
 }
 
 // WriteByte processes a single byte.
-func (t *Terminal) WriteByte(b byte) error {
+func (t *terminal) WriteByte(b byte) error {
 	t.processByte(b)
 
 	return nil
 }
 
-func (t *Terminal) processByte(b byte) {
+func (t *terminal) processByte(b byte) {
 	switch t.state {
 	case stateNormal:
 		t.processNormal(b)
@@ -150,7 +150,7 @@ func (t *Terminal) processByte(b byte) {
 	}
 }
 
-func (t *Terminal) processNormal(b byte) {
+func (t *terminal) processNormal(b byte) {
 	switch b {
 	case asciiNUL, asciiEOF:
 		// ignore
@@ -171,7 +171,7 @@ func (t *Terminal) processNormal(b byte) {
 	}
 }
 
-func (t *Terminal) processEscape(b byte) {
+func (t *terminal) processEscape(b byte) {
 	if b == '[' {
 		t.state = stateCSI
 		t.params = t.params[:0]
@@ -185,7 +185,7 @@ func (t *Terminal) processEscape(b byte) {
 	t.state = stateNormal
 }
 
-func (t *Terminal) processCSI(b byte) {
+func (t *terminal) processCSI(b byte) {
 	switch {
 	case b >= '0' && b <= '9':
 		const base10 = 10
@@ -206,7 +206,7 @@ func (t *Terminal) processCSI(b byte) {
 	}
 }
 
-func (t *Terminal) processCSIPrivate(b byte) {
+func (t *terminal) processCSIPrivate(b byte) {
 	switch b {
 	case 'h':
 		// \x1b[?7h: enable line wrap
@@ -223,7 +223,7 @@ func (t *Terminal) processCSIPrivate(b byte) {
 	}
 }
 
-func (t *Terminal) dispatchCSI(cmd byte) {
+func (t *terminal) dispatchCSI(cmd byte) {
 	switch cmd {
 	case 'H', 'f':
 		t.cursorPosition()
@@ -244,7 +244,7 @@ func (t *Terminal) dispatchCSI(cmd byte) {
 	}
 }
 
-func (t *Terminal) cursorPosition() {
+func (t *terminal) cursorPosition() {
 	row := 1
 	col := 1
 	if len(t.params) > 0 && t.params[0] > 0 {
@@ -258,7 +258,7 @@ func (t *Terminal) cursorPosition() {
 	t.x = max(0, min(t.cols-1, col-1))
 }
 
-func (t *Terminal) cursorMove(cmd byte) {
+func (t *terminal) cursorMove(cmd byte) {
 	n := 1
 	if len(t.params) > 0 && t.params[0] > 0 {
 		n = t.params[0]
@@ -276,7 +276,7 @@ func (t *Terminal) cursorMove(cmd byte) {
 	}
 }
 
-func (t *Terminal) eraseDisplay() {
+func (t *terminal) eraseDisplay() {
 	mode := eraseToEnd
 	if len(t.params) > 0 {
 		mode = t.params[0]
@@ -295,7 +295,7 @@ func (t *Terminal) eraseDisplay() {
 	t.dirty = true
 }
 
-func (t *Terminal) eraseDisplayToEnd(blank Cell) {
+func (t *terminal) eraseDisplayToEnd(blank Cell) {
 	for x := t.x; x < t.cols; x++ {
 		t.grid[t.y][x] = blank
 	}
@@ -306,7 +306,7 @@ func (t *Terminal) eraseDisplayToEnd(blank Cell) {
 	}
 }
 
-func (t *Terminal) eraseDisplayToStart(blank Cell) {
+func (t *terminal) eraseDisplayToStart(blank Cell) {
 	for y := range t.y {
 		for x := range t.cols {
 			t.grid[y][x] = blank
@@ -317,7 +317,7 @@ func (t *Terminal) eraseDisplayToStart(blank Cell) {
 	}
 }
 
-func (t *Terminal) eraseLine() {
+func (t *terminal) eraseLine() {
 	mode := eraseToEnd
 	if len(t.params) > 0 {
 		mode = t.params[0]
@@ -342,7 +342,7 @@ func (t *Terminal) eraseLine() {
 	t.dirty = true
 }
 
-func (t *Terminal) sgr() {
+func (t *terminal) sgr() {
 	if len(t.params) == 0 {
 		t.resetAttrs()
 
@@ -354,21 +354,21 @@ func (t *Terminal) sgr() {
 	}
 }
 
-func (t *Terminal) resetAttrs() {
+func (t *terminal) resetAttrs() {
 	t.bold = false
 	t.blink = false
 	t.curFG = defaultFGColor
 	t.curBG = defaultBGColor
 }
 
-func (t *Terminal) applySGRParam(param int) {
+func (t *terminal) applySGRParam(param int) {
 	if t.applySGRStyle(param) {
 		return
 	}
 	t.applySGRColor(param)
 }
 
-func (t *Terminal) applySGRStyle(param int) bool {
+func (t *terminal) applySGRStyle(param int) bool {
 	switch param {
 	case sgrReset:
 		t.resetAttrs()
@@ -387,14 +387,14 @@ func (t *Terminal) applySGRStyle(param int) bool {
 	return true
 }
 
-func (t *Terminal) applySGRColor(param int) {
+func (t *terminal) applySGRColor(param int) {
 	if t.applySGRFG(param) {
 		return
 	}
 	t.applySGRBG(param)
 }
 
-func (t *Terminal) applySGRFG(param int) bool {
+func (t *terminal) applySGRFG(param int) bool {
 	switch {
 	case param >= sgrFGStart && param <= sgrFGEnd:
 		t.curFG = byte(param - sgrFGStart)
@@ -409,7 +409,7 @@ func (t *Terminal) applySGRFG(param int) bool {
 	return true
 }
 
-func (t *Terminal) applySGRBG(param int) {
+func (t *terminal) applySGRBG(param int) {
 	switch {
 	case param >= sgrBGStart && param <= sgrBGEnd:
 		t.curBG = byte(param - sgrBGStart)
@@ -420,7 +420,7 @@ func (t *Terminal) applySGRBG(param int) {
 	}
 }
 
-func (t *Terminal) effectiveFG() byte {
+func (t *terminal) effectiveFG() byte {
 	if t.bold && t.curFG < brightColorOffset {
 		return t.curFG + brightColorOffset
 	}
@@ -428,7 +428,7 @@ func (t *Terminal) effectiveFG() byte {
 	return t.curFG
 }
 
-func (t *Terminal) effectiveBG() byte {
+func (t *terminal) effectiveBG() byte {
 	if t.blink && t.blinkMode == BlinkICE && t.curBG < brightColorOffset {
 		return t.curBG + brightColorOffset
 	}
@@ -436,7 +436,7 @@ func (t *Terminal) effectiveBG() byte {
 	return t.curBG
 }
 
-func (t *Terminal) writeChar(b byte) {
+func (t *terminal) writeChar(b byte) {
 	cell := Cell{
 		Char: b,
 		FG:   t.effectiveFG(),
@@ -457,7 +457,7 @@ func (t *Terminal) writeChar(b byte) {
 	}
 }
 
-func (t *Terminal) lineFeed() {
+func (t *terminal) lineFeed() {
 	t.y++
 	if t.y >= t.rows {
 		t.scrollUp()
@@ -465,7 +465,7 @@ func (t *Terminal) lineFeed() {
 	}
 }
 
-func (t *Terminal) scrollUp() {
+func (t *terminal) scrollUp() {
 	blank := Cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
 	for y := range t.rows - 1 {
 		copy(t.grid[y], t.grid[y+1])
@@ -476,7 +476,7 @@ func (t *Terminal) scrollUp() {
 	t.dirty = true
 }
 
-func (t *Terminal) tab() {
+func (t *terminal) tab() {
 	t.x = (t.x + tabStop) & ^(tabStop - 1)
 	if t.x >= t.cols {
 		t.x = t.cols - 1

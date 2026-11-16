@@ -90,7 +90,7 @@ func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 type animator struct {
 	cfg          *Config
 	encoder      *animation.AnimEncoder
-	term         *Terminal
+	term         *terminal
 	tick         time.Duration
 	bytesPerTick int
 	frames       int
@@ -111,7 +111,7 @@ func (c *Config) animate(w io.Writer) *animator {
 	bytesPerTick := max(1, bytesPerSec/c.FPS)
 	tick := time.Second / time.Duration(c.FPS)
 
-	term := NewTerminal(c.Columns, c.Rows, c.Blink)
+	term := newTerminal(c.Columns, c.Rows, c.Blink)
 	term.ResetDirty()
 
 	return &animator{

@@ -1,15 +1,14 @@
-package ansimate_test
+package ansimate
 
 import (
 	"testing"
 
-	"github.com/bengarrett/ansimate"
 	"github.com/nalgeon/be"
 )
 
 func TestNewTerminal(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(80, 25, ansimate.BlinkOff)
+	term := newTerminal(80, 25, BlinkOff)
 	be.Equal(t, len(term.Grid()), 25)
 	be.Equal(t, len(term.Grid()[0]), 80)
 	be.True(t, term.IsDirty())
@@ -18,14 +17,14 @@ func TestNewTerminal(t *testing.T) {
 	be.Equal(t, term.IsDirty(), false)
 
 	// Defaults for zero or negative values
-	termDef := ansimate.NewTerminal(0, -1, ansimate.BlinkOff)
+	termDef := newTerminal(0, -1, BlinkOff)
 	be.Equal(t, len(termDef.Grid()), 25)
 	be.Equal(t, len(termDef.Grid()[0]), 80)
 }
 
 func TestTerminalPrintable(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(10, 5, ansimate.BlinkOff)
+	term := newTerminal(10, 5, BlinkOff)
 	_, err := term.Write([]byte("Hello"))
 	be.Err(t, err, nil)
 
@@ -41,7 +40,7 @@ func TestTerminalPrintable(t *testing.T) {
 
 func TestTerminalControlCodes(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(10, 5, ansimate.BlinkOff)
+	term := newTerminal(10, 5, BlinkOff)
 
 	// Backspace
 	_, _ = term.Write([]byte("AB\bC"))
@@ -69,7 +68,7 @@ func TestTerminalControlCodes(t *testing.T) {
 
 func TestTerminalCursorPosition(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(80, 25, ansimate.BlinkOff)
+	term := newTerminal(80, 25, BlinkOff)
 
 	// Position row 3, col 5 (1-indexed -> y=2, x=4)
 	_, _ = term.Write([]byte("\x1b[3;5HX"))
@@ -91,7 +90,7 @@ func TestTerminalCursorPosition(t *testing.T) {
 
 func TestTerminalCursorMoves(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(80, 25, ansimate.BlinkOff)
+	term := newTerminal(80, 25, BlinkOff)
 
 	// Start at row 10, col 10 (y=9, x=9)
 	_, _ = term.Write([]byte("\x1b[10;10H"))
@@ -114,7 +113,7 @@ func TestTerminalCursorMoves(t *testing.T) {
 
 func TestTerminalSaveRestoreCursor(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(80, 25, ansimate.BlinkOff)
+	term := newTerminal(80, 25, BlinkOff)
 
 	// Position at 5, 10 and save
 	_, _ = term.Write([]byte("\x1b[5;10H\x1b[s"))
@@ -130,7 +129,7 @@ func TestTerminalSaveRestoreCursor(t *testing.T) {
 
 func TestTerminalErase(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(10, 5, ansimate.BlinkOff)
+	term := newTerminal(10, 5, BlinkOff)
 
 	// Fill line 0
 	_, _ = term.Write([]byte("0123456789"))
@@ -166,7 +165,7 @@ func TestTerminalErase(t *testing.T) {
 
 func TestTerminalSGR(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(80, 25, ansimate.BlinkOff)
+	term := newTerminal(80, 25, BlinkOff)
 
 	// Red foreground (31), Green background (42)
 	_, _ = term.Write([]byte("\x1b[31;42mX"))
@@ -195,7 +194,7 @@ func TestTerminalSGR(t *testing.T) {
 
 func TestTerminalICEBlink(t *testing.T) {
 	t.Parallel()
-	termICE := ansimate.NewTerminal(80, 25, ansimate.BlinkICE)
+	termICE := newTerminal(80, 25, BlinkICE)
 
 	// Blue background (44) + blink (5) -> in iCE mode promotes to bright background (4 + 8 = 12)
 	_, _ = termICE.Write([]byte("\x1b[44;5mI"))
@@ -204,7 +203,7 @@ func TestTerminalICEBlink(t *testing.T) {
 	be.Equal(t, grid[0][0].BG, byte(12))
 
 	// In BlinkOff mode, background remains standard (4)
-	termOff := ansimate.NewTerminal(80, 25, ansimate.BlinkOff)
+	termOff := newTerminal(80, 25, BlinkOff)
 	_, _ = termOff.Write([]byte("\x1b[44;5mO"))
 	gridOff := termOff.Grid()
 	be.Equal(t, gridOff[0][0].Char, byte('O'))
@@ -213,7 +212,7 @@ func TestTerminalICEBlink(t *testing.T) {
 
 func TestTerminalScrollingAndWrapping(t *testing.T) {
 	t.Parallel()
-	term := ansimate.NewTerminal(5, 3, ansimate.BlinkOff)
+	term := newTerminal(5, 3, BlinkOff)
 
 	// Fill line 0 and wrap to line 1
 	_, _ = term.Write([]byte("12345AB"))
@@ -229,7 +228,7 @@ func TestTerminalScrollingAndWrapping(t *testing.T) {
 	be.Equal(t, grid[2][3].Char, byte('4'))
 
 	// Disable line wrap: \x1b[?7l
-	termWrap := ansimate.NewTerminal(5, 3, ansimate.BlinkOff)
+	termWrap := newTerminal(5, 3, BlinkOff)
 	_, _ = termWrap.Write([]byte("\x1b[?7l12345678"))
 	gridWrap := termWrap.Grid()
 	// Line 0 col 4 should hold the last character written ('8')
