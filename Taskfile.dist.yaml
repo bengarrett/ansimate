@@ -52,7 +52,7 @@ tasks:
   build:
     desc: 'Build the ansimate binary.'
     cmds:
-      - go build -v -o ansimate ./cmd/ansimate
+      - go build -v -trimpath -ldflags="-s -w" -o ansimate ./cmd/ansimate
   test:
     desc: 'Run the test suite.'
     cmds:

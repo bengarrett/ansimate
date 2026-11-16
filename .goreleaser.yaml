@@ -1,0 +1,70 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+version: 2
+report_sizes: true
+project_name: ansimate
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+builds:
+  - main: ./cmd/ansimate
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - windows
+      - darwin
+    # List of combinations of GOOS + GOARCH + GOARM to ignore.
+    ignore:
+      - goos: windows
+        goarch: '386'
+      - goos: windows
+        goarch: 'arm64'
+      - goos: linux
+        goarch: '386'
+      - goos: linux
+        goarch: 'arm64'
+archives:
+  - formats: ['tgz']
+    files:
+      - LICENSE
+      - README*
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      ansimate_ {{- if eq .Os "darwin" }} {{- if .Arm64 }}apple_silicon{{ else }}apple_intel_cpu{{ end }} {{- else }}{{ .Os }}{{ end -}}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+nfpms:
+  - id: Linux
+    package_name: 'ansimate'
+    file_name_template: 'ansimate'
+    vendor: Ben Garrett
+    homepage: https://github.com/bengarrett/ansimate
+    maintainer: Ben Garrett <code.by.ben@gmail.com>
+    description: Take ANSI streams and transform them into compact WebP animations
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
+      - archlinux
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+release:
+  footer: >-
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
