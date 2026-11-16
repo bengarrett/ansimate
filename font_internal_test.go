@@ -41,7 +41,7 @@ func TestDrawCell(t *testing.T) {
 	const bgBlue = 1
 
 	// Draw full block (0xDB)
-	drawCell(img, 0, 0, Cell{
+	drawCell(img, 0, 0, cell{
 		Char: 0xdb,
 		FG:   fgWhite,
 		BG:   bgBlue,
@@ -56,7 +56,7 @@ func TestDrawCell(t *testing.T) {
 	}
 
 	// Draw space (0x20)
-	drawCell(img, 1, 0, Cell{
+	drawCell(img, 1, 0, cell{
 		Char: ' ',
 		FG:   fgWhite,
 		BG:   bgBlue,
@@ -74,11 +74,11 @@ func TestDrawCell(t *testing.T) {
 func TestDrawScreen(t *testing.T) {
 	t.Parallel()
 	pal := Palette
-	grid := make([][]Cell, Rows)
+	grid := make([][]cell, Rows)
 	for r := range grid {
-		grid[r] = make([]Cell, Cols)
+		grid[r] = make([]cell, Cols)
 		for c := range grid[r] {
-			grid[r][c] = Cell{
+			grid[r][c] = cell{
 				Char: ' ',
 				FG:   7,
 				BG:   0,
@@ -92,9 +92,9 @@ func TestDrawScreen(t *testing.T) {
 
 	// Custom size grid
 	const customRows, customCols = 10, 20
-	custom := make([][]Cell, customRows)
+	custom := make([][]cell, customRows)
 	for r := range custom {
-		custom[r] = make([]Cell, customCols)
+		custom[r] = make([]cell, customCols)
 	}
 	customImg := drawScreen(custom, pal)
 	be.Equal(t, customImg.Bounds().Dx(), customCols*GlyphW)

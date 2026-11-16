@@ -47,7 +47,7 @@ const (
 
 // terminal simulates a fixed-dimension character grid with ANSI escape code processing.
 type terminal struct {
-	grid      [][]Cell
+	grid      [][]cell
 	params    []int
 	cols      int
 	rows      int
@@ -83,7 +83,7 @@ func newTerminal(cols, rows int, blink BlinkMode) *terminal {
 		curBG:     defaultBGColor,
 		lineWrap:  true,
 		blinkMode: blink,
-		grid:      make([][]Cell, rows),
+		grid:      make([][]cell, rows),
 		params:    make([]int, 0, brightColorOffset),
 	}
 
@@ -94,9 +94,9 @@ func newTerminal(cols, rows int, blink BlinkMode) *terminal {
 
 // Clear clears the terminal grid and resets the cursor to (0, 0).
 func (t *terminal) Clear() {
-	blank := Cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
+	blank := cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
 	for r := range t.rows {
-		t.grid[r] = make([]Cell, t.cols)
+		t.grid[r] = make([]cell, t.cols)
 		for c := range t.cols {
 			t.grid[r][c] = blank
 		}
@@ -107,7 +107,7 @@ func (t *terminal) Clear() {
 }
 
 // Grid returns the current 2D cell grid of the terminal.
-func (t *terminal) Grid() [][]Cell {
+func (t *terminal) Grid() [][]cell {
 	return t.grid
 }
 
@@ -282,7 +282,7 @@ func (t *terminal) eraseDisplay() {
 		mode = t.params[0]
 	}
 
-	blank := Cell{Char: ' ', FG: defaultFGColor, BG: t.curBG}
+	blank := cell{Char: ' ', FG: defaultFGColor, BG: t.curBG}
 
 	switch mode {
 	case eraseToEnd:
@@ -295,7 +295,7 @@ func (t *terminal) eraseDisplay() {
 	t.dirty = true
 }
 
-func (t *terminal) eraseDisplayToEnd(blank Cell) {
+func (t *terminal) eraseDisplayToEnd(blank cell) {
 	for x := t.x; x < t.cols; x++ {
 		t.grid[t.y][x] = blank
 	}
@@ -306,7 +306,7 @@ func (t *terminal) eraseDisplayToEnd(blank Cell) {
 	}
 }
 
-func (t *terminal) eraseDisplayToStart(blank Cell) {
+func (t *terminal) eraseDisplayToStart(blank cell) {
 	for y := range t.y {
 		for x := range t.cols {
 			t.grid[y][x] = blank
@@ -323,7 +323,7 @@ func (t *terminal) eraseLine() {
 		mode = t.params[0]
 	}
 
-	blank := Cell{Char: ' ', FG: defaultFGColor, BG: t.curBG}
+	blank := cell{Char: ' ', FG: defaultFGColor, BG: t.curBG}
 
 	switch mode {
 	case eraseToEnd:
@@ -437,13 +437,13 @@ func (t *terminal) effectiveBG() byte {
 }
 
 func (t *terminal) writeChar(b byte) {
-	cell := Cell{
+	c := cell{
 		Char: b,
 		FG:   t.effectiveFG(),
 		BG:   t.effectiveBG(),
 	}
 
-	t.grid[t.y][t.x] = cell
+	t.grid[t.y][t.x] = c
 	t.dirty = true
 	t.x++
 
@@ -466,7 +466,7 @@ func (t *terminal) lineFeed() {
 }
 
 func (t *terminal) scrollUp() {
-	blank := Cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
+	blank := cell{Char: ' ', FG: defaultFGColor, BG: defaultBGColor}
 	for y := range t.rows - 1 {
 		copy(t.grid[y], t.grid[y+1])
 	}

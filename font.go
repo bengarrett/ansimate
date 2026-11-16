@@ -27,23 +27,23 @@ const (
 	maxColorIdx   = 15
 )
 
-// Cell represents a single character position on the screen.
-type Cell struct {
+// cell represents a single character position on the screen.
+type cell struct {
 	Char byte
 	FG   byte
 	BG   byte
 }
 
 // drawCell renders a single character cell into the target image at the specified column and row.
-func drawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
-	fgIdx := cell.FG & maxColorIdx
-	bgIdx := cell.BG & maxColorIdx
+func drawCell(img *image.NRGBA, col, row int, c cell, pal [16]color.NRGBA) {
+	fgIdx := c.FG & maxColorIdx
+	bgIdx := c.BG & maxColorIdx
 	fg := pal[fgIdx]
 	bg := pal[bgIdx]
 
 	startX := col * GlyphW
 	startY := row * GlyphH
-	glyphOffset := int(cell.Char) * GlyphL
+	glyphOffset := int(c.Char) * GlyphL
 	glyphData := fontVGA8x16[glyphOffset : glyphOffset+GlyphL]
 
 	for y := range GlyphH {
@@ -69,7 +69,7 @@ func drawCell(img *image.NRGBA, col, row int, cell Cell, pal [16]color.NRGBA) {
 }
 
 // drawScreen renders an entire grid of cells into a new NRGBA image.
-func drawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
+func drawScreen(grid [][]cell, pal [16]color.NRGBA) *image.NRGBA {
 	cols := Cols
 	rows := Rows
 	if len(grid) > 0 {
@@ -86,10 +86,10 @@ func drawScreen(grid [][]Cell, pal [16]color.NRGBA) *image.NRGBA {
 }
 
 // drawScreenBuf renders an entire grid of cells into an existing NRGBA image.
-func drawScreenBuf(img *image.NRGBA, grid [][]Cell, pal [16]color.NRGBA) {
+func drawScreenBuf(img *image.NRGBA, grid [][]cell, pal [16]color.NRGBA) {
 	for row, line := range grid {
-		for col, cell := range line {
-			drawCell(img, col, row, cell, pal)
+		for col, c := range line {
+			drawCell(img, col, row, c, pal)
 		}
 	}
 }
