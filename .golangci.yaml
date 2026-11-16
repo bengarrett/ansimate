@@ -33,6 +33,7 @@ linters:
           allow:
             - $gostd
             - 'golang.org/x/text'
+            - 'github.com/deepteams/webp'
             - 'github.com/nalgeon/be'
             - 'github.com/bengarrett/ansibump'
             - 'github.com/bengarrett/ansimate'

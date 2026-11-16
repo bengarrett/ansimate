@@ -25,7 +25,7 @@ tasks:
     cmds:
       - cmd: clear
         platforms: [linux, darwin, freebsd]
-      - cmd: gci write ./..
+      - cmd: gci write ./...
         platforms: [linux]
       - cmd: go fix ./...
       - cmd: gofumpt -l -w .
@@ -53,6 +53,10 @@ tasks:
       - cmd: go get go.uber.org/nilaway/cmd/nilaway@latest
       - cmd: go mod verify
       - cmd: go mod tidy
+  build:
+    desc: 'Build the ansimate binary.'
+    cmds:
+      - go build -v -o ansimate ./cmd/ansimate
   test:
     desc: 'Run the test suite.'
     cmds:

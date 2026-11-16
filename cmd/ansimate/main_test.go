@@ -1,0 +1,74 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/nalgeon/be"
+)
+
+func TestCLINoArgs(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	err := run(&buf)
+	be.Err(t, err, errNoInput)
+	be.True(t, strings.Contains(buf.String(), "Usage:"))
+}
+
+func TestCLIVersion(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	err := run(&buf, "-version")
+	be.Err(t, err, nil)
+	be.True(t, strings.Contains(buf.String(), "ansimate v"))
+}
+
+func TestCLINonExistent(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	err := run(&buf, "/path/does/not/exist/test.ans")
+	be.True(t, err != nil)
+}
+
+func TestCLICheck(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	ansFile := filepath.Join(tmpDir, "test.ans")
+	err := os.WriteFile(ansFile, []byte("\x1b[2J\x1b[1;1HHello\x1b[2J\x1b[1;1HWorld"), 0o600)
+	be.Err(t, err, nil)
+
+	var buf bytes.Buffer
+	err = run(&buf, "-check", ansFile)
+	be.Err(t, err, nil)
+	be.True(t, strings.Contains(buf.String(), "ANSImation detected"))
+}
+
+func TestCLIConvert(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	ansFile := filepath.Join(tmpDir, "anim.ans")
+	err := os.WriteFile(ansFile, []byte("\x1b[2J\x1b[1;1HFrame1\x1b[2J\x1b[1;1HFrame2"), 0o600)
+	be.Err(t, err, nil)
+
+	// Test with auto-generated output path (<input>.webp)
+	var buf bytes.Buffer
+	err = run(&buf, ansFile)
+	be.Err(t, err, nil)
+	expectedOut := filepath.Join(tmpDir, "anim.webp")
+	st, err := os.Stat(expectedOut)
+	be.Err(t, err, nil)
+	be.True(t, st.Size() > 0)
+	be.True(t, strings.Contains(buf.String(), "Done!"))
+
+	// Test with explicit output path
+	explicitOut := filepath.Join(tmpDir, "custom.webp")
+	var buf2 bytes.Buffer
+	err = run(&buf2, ansFile, explicitOut)
+	be.Err(t, err, nil)
+	st2, err := os.Stat(explicitOut)
+	be.Err(t, err, nil)
+	be.True(t, st2.Size() > 0)
+}
