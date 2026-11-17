@@ -67,4 +67,13 @@ release:
   footer: >-
     ---
 
+    ANSImate uses standalone portable binaries, needs no dependencies, and requires no installation.
+
+    macOS and Linux users can install via Homebrew:
+
+    ```
+    brew tap bengarrett/ansimate https://github.com/bengarrett/ansimate
+    brew install bengarrett/ansimate/ansimate
+    ```
+
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
