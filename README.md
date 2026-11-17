@@ -44,7 +44,7 @@ _1993 'A Tribute Ansimation' By Kronos_
 
 A small, standalone program is provided for converting files without the need for writing Go code.
 
-##### [Download the latest release](https://github.com/bengarrett/ansimate/releases/latest)
+#### [Download the latest release](https://github.com/bengarrett/ansimate/releases/latest)
 
 ```bash
 # Or, build the binary
@@ -120,6 +120,18 @@ cfg := &ansimate.Config{
 
 err := ansimate.Animate(output, input, cfg)
 ```
+
+#### Similar Projects
+
+- [AnsiLove/C](https://www.ansilove.org/) is the classic, long standing tool for converting ANSI to PNG images.
+- [AnsiLove.js](https://ansilove.github.io/ansilove.js/) is a JS port by the same team and with ANSImation support! But requires programming to use. You can try it out at [ansitube](https://ansilove.github.io/ansilove.js/ansitube/). Both tools also have far more options for customizations with fonts, CodePages, and languages.
+
+#### Art
+
+- There is a large collection of easy to navigate art on [Defacto2](https://defacto2.net/files/ansi), ordered by year. With the years between 1988 - 1993 most likely to offer animations.
+- [16colo.rs](https://16colo.rs/tags/content/ansimation) has hundreds of art tagged as ansimation.
+
+Just remember, many of these works were by edgy or nerd kids and young adults of the 1980-90s, online using computers, long before it was mainstream. So plenty of drawings lean heavily into cartoons, comic book characters, and teen humour.
 
 ### License
 
