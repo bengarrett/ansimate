@@ -1,6 +1,7 @@
 package ansimate_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -38,6 +39,36 @@ func TestDetectStaticANSI(t *testing.T) {
 	}, "\r\n")
 
 	isAnim, err := ansimate.Detect(strings.NewReader(staticArt))
+	be.Err(t, err, nil)
+	be.Equal(t, isAnim, false)
+}
+
+func TestDetectStaticTheDrawWrapped(t *testing.T) {
+	t.Parallel()
+	// Static ANSI saved by TheDraw using \x1b[s\r\n\x1b[u line-wraps and \x1b[nC forward moves
+	var sb strings.Builder
+	sb.WriteString("\x1b[40m\x1b[2J")
+	for row := 1; row <= 20; row++ {
+		sb.WriteString("\x1b[")
+		sb.WriteString(strconv.Itoa(row))
+		sb.WriteString("H\x1b[2C##############################\x1b[s\r\n\x1b[u##############################")
+	}
+
+	isAnim, err := ansimate.Detect(strings.NewReader(sb.String()))
+	be.Err(t, err, nil)
+	be.Equal(t, isAnim, false)
+}
+
+func TestDetectStaticLongScroll(t *testing.T) {
+	t.Parallel()
+	// Static text/ANSI stream taller than 25 rows scrolling downward
+	var sb strings.Builder
+	sb.WriteString("\x1b[2J")
+	for range 60 {
+		sb.WriteString("This is a normal static line of text that scrolls down the terminal.\r\n")
+	}
+
+	isAnim, err := ansimate.Detect(strings.NewReader(sb.String()))
 	be.Err(t, err, nil)
 	be.Equal(t, isAnim, false)
 }

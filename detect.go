@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	minClearsForAnim     = 2
-	minBacktracksForAnim = 5
-	minOverwritesForAnim = 25
+	minBacktracks = 5
+	minOverwrites = 25
+	minClears     = 2
+	minChurn      = 100
 
 	sauceRecordLen  = 128
 	sauceTagLen     = 5
@@ -39,6 +40,26 @@ func Detect(r io.Reader) (bool, error) {
 
 // DetectB inspects the bytes and returns true if it represents an ANSImation.
 func DetectB(data []byte) bool {
+	// Detection runs in two stages:
+	//
+	// 1. SAUCE metadata (checkSAUCE):
+	//    Inspects the trailing 128-byte SAUCE record (ignoring a trailing 0x1A EOF
+	//    byte) for DataType 1 (Character) and FileType 2 (ANSImation).
+	//
+	// 2. Terminal stream heuristics (checkHeuristics):
+	//
+	//    Simulates an 80x25 ANSI.SYS grid—including cursor save/restore (\x1b[s and
+	//    \x1b[u used by TheDraw to wrap file lines via \x1b[s\r\n\x1b[u), relative
+	//    moves, line wrapping, erasing, and bottom-row scrolling—so static
+	//    left-to-right, top-to-bottom streams produce zero backtracks or overwrites.
+	//
+	//    A stream is classified as an ANSImation as soon as any threshold is met:
+	//    - Multi-clear transitions (clears >= 2): multiple \x1b[2J screen clears.
+	//    - Cell overwrites (backtracks >= 5 && overwrites >= 25): cursor rewinds to
+	//      an earlier screen coordinate and overwrites existing non-space cells.
+	//    - Choreographed construction (backtracks >= 100): non-linear drawing order
+	//      (e.g. TheDraw animation mode) where characters are painted out of
+	//      reading order even without overwriting previously drawn cells.
 	if len(data) == 0 {
 		return false
 	}
@@ -76,9 +97,14 @@ type detector struct {
 	params     []int
 	x          int
 	y          int
+	savedX     int
+	savedY     int
+	lastWriteX int
+	lastWriteY int
 	clears     int
 	backtracks int
 	overwrites int
+	lineWrap   bool
 	state      parserState
 	curParam   int
 	hasParam   bool
@@ -86,58 +112,73 @@ type detector struct {
 
 func checkHeuristics(data []byte) bool {
 	d := &detector{
-		params: make([]int, 0, brightOffset),
+		params:     make([]int, 0, brightOffset),
+		lastWriteX: -1,
+		lastWriteY: -1,
+		lineWrap:   true,
 	}
 
-	return slices.ContainsFunc(data, d.processByte)
+	return slices.ContainsFunc(data, d.process)
 }
 
-func (d *detector) processByte(b byte) bool {
+func (d *detector) process(b byte) bool {
 	switch d.state {
 	case stateNormal:
-		d.processNormal(b)
+		d.normal(b)
 	case stateEscape:
-		d.processEscape(b)
+		d.escape(b)
 	case stateCSI:
-		d.processCSI(b)
+		d.csi(b)
 	case stateCSIPrivate:
-		if (b < '0' || b > '9') && b != ';' {
-			d.state = stateNormal
-		}
+		d.private(b)
 	}
 
 	return d.isAnimation()
 }
 
+func (d *detector) private(b byte) {
+	switch b {
+	case 'h':
+		d.lineWrap = true
+		d.state = stateNormal
+	case 'l':
+		d.lineWrap = false
+		d.state = stateNormal
+	default:
+		if (b < '0' || b > '9') && b != ';' {
+			d.state = stateNormal
+		}
+	}
+}
+
 func (d *detector) isAnimation() bool {
-	if d.clears >= minClearsForAnim {
+	if d.clears >= minClears || d.backtracks >= minChurn {
 		return true
 	}
 
-	return d.backtracks >= minBacktracksForAnim && d.overwrites >= minOverwritesForAnim
+	return d.backtracks >= minBacktracks && d.overwrites >= minOverwrites
 }
 
-func (d *detector) processNormal(b byte) {
-	if d.processControl(b) {
+func (d *detector) normal(b byte) {
+	if d.control(b) {
 		return
 	}
 	d.writeChar(b)
 }
 
-func (d *detector) processControl(b byte) bool {
+func (d *detector) control(b byte) bool {
 	switch b {
 	case asciiNUL, asciiEOF:
 	case asciiESC:
 		d.state = stateEscape
 	case asciiCR:
-		if d.x > 0 {
-			d.backtracks++
-		}
 		d.x = 0
 	case asciiLF:
 		d.lineFeed()
 	case asciiBS:
-		d.backspace()
+		if d.x > 0 {
+			d.x--
+		}
 	case asciiTAB:
 		d.tab()
 	default:
@@ -150,14 +191,18 @@ func (d *detector) processControl(b byte) bool {
 func (d *detector) lineFeed() {
 	d.y++
 	if d.y >= Rows {
+		d.scrollUp()
 		d.y = Rows - 1
 	}
 }
 
-func (d *detector) backspace() {
-	if d.x > 0 {
-		d.x--
-		d.backtracks++
+func (d *detector) scrollUp() {
+	for y := range Rows - 1 {
+		d.grid[y] = d.grid[y+1]
+	}
+	d.grid[Rows-1] = [Cols]byte{}
+	if d.lastWriteY >= 0 {
+		d.lastWriteY--
 	}
 }
 
@@ -168,7 +213,7 @@ func (d *detector) tab() {
 	}
 }
 
-func (d *detector) processEscape(b byte) {
+func (d *detector) escape(b byte) {
 	if b == '[' {
 		d.state = stateCSI
 		d.params = d.params[:0]
@@ -181,7 +226,7 @@ func (d *detector) processEscape(b byte) {
 	d.state = stateNormal
 }
 
-func (d *detector) processCSI(b byte) {
+func (d *detector) csi(b byte) {
 	switch {
 	case b >= '0' && b <= '9':
 		const base10 = 10
@@ -206,12 +251,18 @@ func (d *detector) dispatchCSI(cmd byte) {
 	switch cmd {
 	case 'H', 'f':
 		d.cursorPosition()
-	case 'A':
-		d.cursorUp()
-	case 'D':
-		d.cursorBack()
+	case 'A', 'B', 'C', 'D':
+		d.cursorMove(cmd)
 	case 'J':
 		d.eraseDisplay()
+	case 'K':
+		d.eraseLine()
+	case 's':
+		d.savedX = d.x
+		d.savedY = d.y
+	case 'u':
+		d.x = max(0, min(Cols-1, d.savedX))
+		d.y = max(0, min(Rows-1, d.savedY))
 	}
 }
 
@@ -225,35 +276,26 @@ func (d *detector) cursorPosition() {
 		col = d.params[1]
 	}
 
-	newY := max(0, min(Rows-1, row-1))
-	newX := max(0, min(Cols-1, col-1))
-
-	if newY < d.y || (newY == d.y && newX < d.x) {
-		d.backtracks++
-	}
-
-	d.y = newY
-	d.x = newX
+	d.y = max(0, min(Rows-1, row-1))
+	d.x = max(0, min(Cols-1, col-1))
 }
 
-func (d *detector) cursorUp() {
+func (d *detector) cursorMove(cmd byte) {
 	n := 1
 	if len(d.params) > 0 && d.params[0] > 0 {
 		n = d.params[0]
 	}
 
-	d.backtracks += n
-	d.y = max(0, d.y-n)
-}
-
-func (d *detector) cursorBack() {
-	n := 1
-	if len(d.params) > 0 && d.params[0] > 0 {
-		n = d.params[0]
+	switch cmd {
+	case 'A':
+		d.y = max(0, d.y-n)
+	case 'B':
+		d.y = min(Rows-1, d.y+n)
+	case 'C':
+		d.x = min(Cols-1, d.x+n)
+	case 'D':
+		d.x = max(0, d.x-n)
 	}
-
-	d.backtracks += n
-	d.x = max(0, d.x-n)
 }
 
 func (d *detector) eraseDisplay() {
@@ -262,28 +304,87 @@ func (d *detector) eraseDisplay() {
 		mode = d.params[0]
 	}
 
-	if mode == eraseAll {
+	switch mode {
+	case eraseToEnd:
+		d.eraseDisplayToEnd()
+	case eraseToStart:
+		d.eraseDisplayToStart()
+	case eraseAll:
 		d.clears++
+		d.grid = [Rows][Cols]byte{}
 		d.x = 0
 		d.y = 0
+		d.lastWriteX = -1
+		d.lastWriteY = -1
+	}
+}
+
+func (d *detector) eraseDisplayToEnd() {
+	for x := d.x; x < Cols; x++ {
+		d.grid[d.y][x] = 0
+	}
+	for y := d.y + 1; y < Rows; y++ {
+		d.grid[y] = [Cols]byte{}
+	}
+}
+
+func (d *detector) eraseDisplayToStart() {
+	for y := range d.y {
+		d.grid[y] = [Cols]byte{}
+	}
+	for x := 0; x <= d.x && x < Cols; x++ {
+		d.grid[d.y][x] = 0
+	}
+}
+
+func (d *detector) eraseLine() {
+	mode := eraseToEnd
+	if len(d.params) > 0 {
+		mode = d.params[0]
+	}
+
+	switch mode {
+	case eraseToEnd:
+		for x := d.x; x < Cols; x++ {
+			d.grid[d.y][x] = 0
+		}
+	case eraseToStart:
+		for x := 0; x <= d.x && x < Cols; x++ {
+			d.grid[d.y][x] = 0
+		}
+	case eraseAll:
+		d.grid[d.y] = [Cols]byte{}
 	}
 }
 
 func (d *detector) writeChar(b byte) {
 	if d.y < Rows && d.x < Cols {
-		existing := d.grid[d.y][d.x]
-		if existing != 0 && existing != asciiSpace {
-			d.overwrites++
-		}
-		d.grid[d.y][d.x] = b
+		d.recordWrite(b)
 	}
 
 	d.x++
 	if d.x >= Cols {
-		d.x = 0
-		d.y++
-		if d.y >= Rows {
-			d.y = Rows - 1
+		if d.lineWrap {
+			d.x = 0
+			d.lineFeed()
+		} else {
+			d.x = Cols - 1
 		}
 	}
+}
+
+func (d *detector) recordWrite(b byte) {
+	if d.lastWriteY >= 0 {
+		if d.y < d.lastWriteY || (d.y == d.lastWriteY && d.x <= d.lastWriteX) {
+			d.backtracks++
+		}
+	}
+	d.lastWriteX = d.x
+	d.lastWriteY = d.y
+
+	existing := d.grid[d.y][d.x]
+	if existing != 0 && existing != asciiSpace {
+		d.overwrites++
+	}
+	d.grid[d.y][d.x] = b
 }
