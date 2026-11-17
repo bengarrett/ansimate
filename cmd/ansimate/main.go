@@ -44,6 +44,7 @@ type flags struct {
 	maximum  time.Duration
 	lossy    bool
 	check    bool
+	quiet    bool
 	ver      bool
 }
 
@@ -96,6 +97,9 @@ func run(w io.Writer, args ...string) error {
 		printUsage(w)
 
 		return nil
+	}
+	if fl.quiet {
+		w = io.Discard
 	}
 
 	input := arg[0]
@@ -178,6 +182,8 @@ func setupFlags(fs *flag.FlagSet, fl *flags) {
 		"Destination WebP filename (defaults to <input>.webp)")
 	fs.StringVar(&fl.output, "output", "",
 		"Destination WebP filename (defaults to <input>.webp)")
+	fs.StringVar(&fl.palette, "p", "vga",
+		"Color palette: vga, mono, amber, green")
 	fs.StringVar(&fl.palette, "palette", "vga",
 		"Color palette: vga, mono, amber, green")
 	fs.IntVar(&fl.baudRate, "baud", ansimate.BaudRate,
@@ -190,8 +196,14 @@ func setupFlags(fs *flag.FlagSet, fl *flags) {
 		"Maximum animation duration cap")
 	fs.BoolVar(&fl.lossy, "lossy", false,
 		"Enable lossy WebP compression (not recommended)")
+	fs.BoolVar(&fl.check, "c", false,
+		"Only detect if file is an ANSImation without converting")
 	fs.BoolVar(&fl.check, "check", false,
 		"Only detect if file is an ANSImation without converting")
+	fs.BoolVar(&fl.quiet, "q", false,
+		"Quiet output")
+	fs.BoolVar(&fl.quiet, "quiet", false,
+		"Quiet output")
 	fs.BoolVar(&fl.ver, "v", false,
 		"Display version")
 	fs.BoolVar(&fl.ver, "version", false,
@@ -344,14 +356,17 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  -o, -output <file>   Destination WebP filename (default \"<input>.webp\")")
-	fmt.Fprintln(w, "  -palette <name>      Color palette: vga, mono, amber, green (default \"vga\")")
+	fmt.Fprintln(w, "  -p, -palette <name>  Color palette: vga, mono, amber, green (default \"vga\")")
+	fmt.Fprintln(w, "  -c, -check           Only detect if file is an ANSImation without converting")
+	fmt.Fprintln(w, "  -q, -quiet           Silence all output except errors")
+	fmt.Fprintln(w, "  -v, -version         Display version")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Output Tweaks:")
 	fmt.Fprintln(w, "  -baud <int>          Simulated BBS modem baud rate (default 19200)")
 	fmt.Fprintln(w, "  -fps <int>           Target animation frame rate (default 20)")
 	fmt.Fprintln(w, "  -delay <duration>    Duration to hold final frame before looping (default 2s)")
 	fmt.Fprintln(w, "  -max <duration>      Maximum animation duration cap (default 30s)")
-	fmt.Fprintln(w, "  -lossy               Enable lossy WebP compression (not recommended)")
-	fmt.Fprintln(w, "  -check               Only detect if file is an ANSImation without converting")
-	fmt.Fprintln(w, "  -v, -version         Display version")
+	fmt.Fprintln(w, "  -lossy               Use lossy compression (usually not recommended)")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Examples:")
 	fmt.Fprintln(w, "  ansimate animation.ans")
