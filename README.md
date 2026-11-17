@@ -31,6 +31,10 @@ _1988 advert for the Pass It On BBS_
 
 _1991 advert for the BBS-a-Holic BBS by RaD Man_
 
+[![And then they went animated comic book](readme/KS-RGRK1.webp)](https://defacto2.net/f/b02d6c9)
+
+_1993 'A Tribute Ansimation' By Kronos_
+
 <small>
   The example images were created using ANSImate, however, the &copy; belongs to their authors.
   These authors do not endorse ANSImate and permission for their use in this article was never asked.

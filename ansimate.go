@@ -23,28 +23,26 @@ var (
 const (
 	BaudRate    = 19200                  // BaudRate is the default simulated BBS transmission speed in bits per second.
 	FPS         = 20                     // FPS is the default target frame rate.
-	MaxDuration = 30 * time.Second       // MaxDuration is the default maximum playback time before stopping.
+	MaxDuration = 0                      // MaxDuration is 0 (unlimited duration by default, plays until EOF).
 	EndDelay    = 2 * time.Second        // EndDelay is the default pause time on the final frame before looping.
 	BlinkDelay  = 533 * time.Millisecond // BlinkDelay is the ~1.88 Hz IBM PC VGA hardware text blink rate.
 	Cols        = 80                     // Cols is the default terminal width in character cells.
 	Rows        = 25                     // Rows is the default terminal height in character cells.
 
-	bitsPerByte    = 10
-	maxFrames      = 500
-	minBaudRate    = 300              // Bell 103 300-baud modem floor.
-	maxBaudRate    = 115200           // PC 16550A UART hardware ceiling.
-	maxFPS         = 70               // VGA 80x25 text-mode 70 Hz vertical refresh rate ceiling.
-	maxDurationCap = 2 * time.Minute  // Bounds total CPU encoding time.
-	maxEndDelay    = 10 * time.Second // Prevents looping animations from appearing frozen.
-	maxCols        = 160              // Bounds per-frame RGBA memory allocation (SVGA text mode limit).
-	maxRows        = 100              // Bounds per-frame RGBA memory allocation (extended ANSI limit).
+	bitsPerByte = 10
+	minBaudRate = 300              // Bell 103 300-baud modem floor.
+	maxBaudRate = 115200           // PC 16550A UART hardware ceiling.
+	maxFPS      = 70               // VGA 80x25 text-mode 70 Hz vertical refresh rate ceiling.
+	maxEndDelay = 10 * time.Second // Prevents looping animations from appearing frozen.
+	maxCols     = 160              // Bounds per-frame RGBA memory allocation (SVGA text mode limit).
+	maxRows     = 100              // Bounds per-frame RGBA memory allocation (extended ANSI limit).
 )
 
 // Config defines options for the animated WebP conversion.
 type Config struct {
 	BaudRate    int             // BaudRate is the simulated transmission speed in bps (default 19200, range 300–115200).
 	FPS         int             // FPS is the target frames per second (default 20, max 70).
-	MaxDuration time.Duration   // MaxDuration is the maximum playback duration (default 30s, max 2m).
+	MaxDuration time.Duration   // MaxDuration is the maximum playback duration (default 0 for unlimited).
 	EndDelay    time.Duration   // EndDelay is the pause held on the final frame (default 2s, max 10s).
 	Columns     int             // Columns is the terminal width in character cells (default 80, max 160).
 	Rows        int             // Rows is the terminal height in character cells (default 25, max 100).
@@ -64,10 +62,9 @@ func (c *Config) sanitize() {
 	}
 	c.FPS = min(c.FPS, maxFPS)
 
-	if c.MaxDuration <= 0 {
-		c.MaxDuration = MaxDuration
+	if c.MaxDuration < 0 {
+		c.MaxDuration = 0
 	}
-	c.MaxDuration = min(c.MaxDuration, maxDurationCap)
 
 	if c.EndDelay <= 0 {
 		c.EndDelay = EndDelay
@@ -222,7 +219,7 @@ func (a *animator) run(r io.Reader) error {
 			return fmt.Errorf("read: %w", err)
 		}
 
-		if duration >= a.cfg.MaxDuration || a.frames >= maxFrames {
+		if a.cfg.MaxDuration > 0 && duration >= a.cfg.MaxDuration {
 			break
 		}
 	}

@@ -207,8 +207,8 @@ func setupFlags(fs *flag.FlagSet, fl *flags) {
 		"Target animation frame rate (FPS)")
 	fs.DurationVar(&fl.delay, "delay", ansimate.EndDelay,
 		"Duration to hold final frame before looping")
-	fs.DurationVar(&fl.maximum, "max", ansimate.MaxDuration,
-		"Maximum animation duration cap")
+	fs.DurationVar(&fl.maximum, "max", 0,
+		"Maximum animation duration cap (default unlimited)")
 	fs.BoolVar(&fl.lossy, "lossy", false,
 		"Enable lossy WebP compression (not recommended)")
 	fs.BoolVar(&fl.cga, "cga", false,
@@ -427,8 +427,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  -baud <int>          Simulated BBS modem baud rate (default 19200)")
 	fmt.Fprintln(w, "  -fps <int>           Target animation frame rate (default 20)")
 	fmt.Fprintln(w, "  -delay <duration>    Duration to hold final frame before looping (default 2s)")
-	fmt.Fprintln(w, "  -max <duration>      Maximum animation duration cap (default 30s)")
-	fmt.Fprintln(w, "  -lossy               Use lossy compression (usually not recommended)")
+	fmt.Fprintln(w, "  -max <duration>      Maximum animation duration cap (default none)")
+	fmt.Fprintln(w, "  -lossy               Use lossy compression (usually not wanted)")
 	fmt.Fprintln(w, "  -cga                 Use 8x8 IBM CGA font instead of 8x16 VGA font")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Examples:")
