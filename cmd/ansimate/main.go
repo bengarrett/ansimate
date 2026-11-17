@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"time"
 
@@ -81,10 +82,20 @@ func run(w io.Writer, args ...string) error {
 	}
 
 	arg := fs.Args()
+	help := slices.ContainsFunc(arg, func(s string) bool {
+		// permit non-standard flags and positions for the help screen
+		// these include some undocumented flags for typos, guessing etc
+		return s == "-h" || s == "-help" || s == "--help" || s == "-?" || s == "/?"
+	})
 	if len(arg) == 0 {
 		printUsage(w)
 
 		return errNoInput
+	}
+	if help {
+		printUsage(w)
+
+		return nil
 	}
 
 	input := arg[0]
