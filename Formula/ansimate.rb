@@ -14,7 +14,8 @@ class Ansimate < Formula
   depends_on "go" => :build
 
   def install
-    system "go", "build", *std_go_args(ldflags: "-s -w -X main.version=#{version}"), "./cmd/ansimate"
+    ldflags = "-s -w -X main.version=#{version} -X main.date=#{time.iso8601}"
+    system "go", "build", *std_go_args(ldflags: ldflags), "./cmd/ansimate"
   end
 
   test do

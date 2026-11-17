@@ -28,7 +28,11 @@ var (
 	errUnknownPalette = errors.New("unknown palette (valid: vga, mono, amber, green)")
 )
 
-var version string // populated by GoReleaser ldflags
+//nolint:gochecknoglobals
+var (
+	version string // populated by GoReleaser ldflags
+	date    string // populated by GoReleaser ldflags
+)
 
 type flags struct {
 	output   string
@@ -94,6 +98,15 @@ func run(w io.Writer, args ...string) error {
 }
 
 func buildVersion() string {
+	v := resolveVersion()
+	if d := resolveDate(); d != "" {
+		return fmt.Sprintf("%s (%s)", v, d)
+	}
+
+	return v
+}
+
+func resolveVersion() string {
 	if version != "" {
 		return version
 	}
@@ -117,6 +130,36 @@ func buildVersion() string {
 	}
 
 	return "devel"
+}
+
+func resolveDate() string {
+	raw := date
+	if raw == "" {
+		raw = vcsTime()
+	}
+	if raw == "" {
+		return ""
+	}
+	t, err := time.Parse(time.RFC3339, raw)
+	if err == nil {
+		return t.UTC().Format("2006-JAN-02")
+	}
+
+	return raw
+}
+
+func vcsTime() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.time" {
+			return s.Value
+		}
+	}
+
+	return ""
 }
 
 func setupFlags(fs *flag.FlagSet, fl *flags) {
