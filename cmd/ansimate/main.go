@@ -26,6 +26,7 @@ const (
 
 var (
 	errNoInput        = errors.New("no input file specified")
+	errOutput         = errors.New("output file already exists")
 	errUnknownPalette = errors.New("unknown palette (valid: vga, mono, amber, green)")
 )
 
@@ -43,8 +44,9 @@ type flags struct {
 	delay    time.Duration
 	maximum  time.Duration
 	lossy    bool
-	check    bool
 	quiet    bool
+	noOW     bool
+	check    bool
 	ver      bool
 }
 
@@ -186,6 +188,10 @@ func setupFlags(fs *flag.FlagSet, fl *flags) {
 		"Color palette: vga, mono, amber, green")
 	fs.StringVar(&fl.palette, "palette", "vga",
 		"Color palette: vga, mono, amber, green")
+	fs.BoolVar(&fl.noOW, "n", false,
+		"No overwriting existing outputs")
+	fs.BoolVar(&fl.noOW, "no-overwrite", false,
+		"No overwriting existing outputs")
 	fs.IntVar(&fl.baudRate, "baud", ansimate.BaudRate,
 		"Simulated BBS modem baud rate")
 	fs.IntVar(&fl.fps, "fps", ansimate.FPS,
@@ -254,6 +260,13 @@ func execute(w io.Writer, input, output string, fl *flags) error {
 	cfg, err := buildConfig(fl)
 	if err != nil {
 		return err
+	}
+
+	if fl.noOW {
+		_, err := os.Open(filepath.Clean(output))
+		if err == nil || !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("no overwrite: %w", errOutput)
+		}
 	}
 
 	f, err := os.Open(filepath.Clean(input))
@@ -357,8 +370,9 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  -o, -output <file>   Destination WebP filename (default \"<input>.webp\")")
 	fmt.Fprintln(w, "  -p, -palette <name>  Color palette: vga, mono, amber, green (default \"vga\")")
+	fmt.Fprintln(w, "  -n, -no-overwrite    No overwriting existing outputs, instead abort")
+	fmt.Fprintln(w, "  -q, -quiet           Silence output except for errors")
 	fmt.Fprintln(w, "  -c, -check           Only detect if file is an ANSImation without converting")
-	fmt.Fprintln(w, "  -q, -quiet           Silence all output except errors")
 	fmt.Fprintln(w, "  -v, -version         Display version")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Output Tweaks:")
