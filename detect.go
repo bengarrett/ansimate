@@ -35,23 +35,32 @@ func Detect(r io.Reader) (bool, error) {
 		return false, fmt.Errorf("read: %w", err)
 	}
 
+	if binary(data) {
+		return false, ErrBinary
+	}
+
 	return DetectB(data), nil
 }
 
 // DetectB inspects the bytes and returns true if it represents an ANSImation.
 func DetectB(data []byte) bool {
-	// Detection runs in two stages:
+	// Detection runs in three stages:
 	//
-	// 1. SAUCE metadata (checkSAUCE):
+	// 1. Binary rejection (isBinary):
+	//    Rejects binary data containing null bytes (0x00) in the body (excluding
+	//    trailing SAUCE records or DOS sector padding).
+	//
+	// 2. SAUCE metadata (checkSAUCE):
 	//    Inspects the trailing 128-byte SAUCE record (ignoring a trailing 0x1A EOF
 	//    byte) for DataType 1 (Character) and FileType 2 (ANSImation).
 	//
-	// 2. Terminal stream heuristics (checkHeuristics):
+	// 3. Terminal stream heuristics (checkHeuristics):
 	//
-	//    Simulates an 80x25 ANSI.SYS grid—including cursor save/restore (\x1b[s and
-	//    \x1b[u used by TheDraw to wrap file lines via \x1b[s\r\n\x1b[u), relative
-	//    moves, line wrapping, erasing, and bottom-row scrolling—so static
-	//    left-to-right, top-to-bottom streams produce zero backtracks or overwrites.
+	//    Requires at least one ANSI CSI sequence (\x1b[) and simulates an 80x25
+	//    ANSI.SYS grid—including cursor save/restore (\x1b[s and \x1b[u used by
+	//    TheDraw to wrap file lines via \x1b[s\r\n\x1b[u), relative moves, line
+	//    wrapping, erasing, and bottom-row scrolling—so static left-to-right,
+	//    top-to-bottom streams produce zero backtracks or overwrites.
 	//
 	//    A stream is classified as an ANSImation as soon as any threshold is met:
 	//    - Multi-clear transitions (clears >= 2): multiple \x1b[2J or 0x0C (Form
@@ -61,7 +70,7 @@ func DetectB(data []byte) bool {
 	//    - Choreographed construction (backtracks >= 100): non-linear drawing order
 	//      (e.g. TheDraw animation mode) where characters are painted out of
 	//      reading order even without overwriting previously drawn cells.
-	if len(data) == 0 {
+	if len(data) == 0 || binary(data) {
 		return false
 	}
 
@@ -70,6 +79,58 @@ func DetectB(data []byte) bool {
 	}
 
 	return checkHeuristics(data)
+}
+
+// DetectBlink reports whether the reader is a static ANSI file containing visible blinking text.
+func DetectBlink(r io.Reader) (bool, error) {
+	if r == nil {
+		return false, ErrNilReader
+	}
+
+	lr := io.LimitReader(r, maxDetectBytes)
+	data, err := io.ReadAll(lr)
+	if err != nil {
+		return false, fmt.Errorf("read: %w", err)
+	}
+
+	return DetectBlinkB(data), nil
+}
+
+// DetectBlinkB reports whether data is a static ANSI file containing visible blinking text.
+func DetectBlinkB(data []byte) bool {
+	if len(data) == 0 || binary(data) || DetectB(data) {
+		return false
+	}
+
+	term := newTerminal(Cols, Rows)
+	_, _ = term.Write(data)
+
+	return term.HasBlink()
+}
+
+// binary reports whether data appears to be binary rather than text or ANSI art.
+// ANSI streams never contain null bytes (0x00) in the body, while binary formats do.
+func binary(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+
+	// Strip trailing SAUCE record (128 bytes, optionally preceded by 0x1A EOF)
+	// because SAUCE binary fields may legitimately contain 0x00 bytes.
+	body := data
+	if len(body) >= sauceRecordLen {
+		if bytes.HasPrefix(body[len(body)-sauceRecordLen:], []byte("SAUCE")) {
+			body = body[:len(body)-sauceRecordLen]
+		} else if len(body) > sauceRecordLen && body[len(body)-sauceRecordLen-1] == asciiEOF &&
+			bytes.HasPrefix(body[len(body)-sauceRecordLen:], []byte("SAUCE")) {
+			body = body[:len(body)-sauceRecordLen-1]
+		}
+	}
+
+	// Strip trailing DOS EOF (0x1A) and sector padding (0x00, 0x20).
+	body = bytes.TrimRight(body, "\x00\x1a\x20")
+
+	return bytes.IndexByte(body, asciiNUL) != -1
 }
 
 func checkSAUCE(data []byte) bool {
@@ -113,6 +174,10 @@ type detector struct {
 }
 
 func checkHeuristics(data []byte) bool {
+	if !bytes.Contains(data, []byte("\x1b[")) {
+		return false
+	}
+
 	d := &detector{
 		params:     make([]int, 0, brightOffset),
 		lastWriteX: -1,

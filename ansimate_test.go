@@ -30,6 +30,13 @@ func TestAnimateEmpty(t *testing.T) {
 	be.Err(t, err, ansimate.ErrEmpty)
 }
 
+func TestAnimateBinary(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	err := ansimate.Animate(&buf, strings.NewReader("RIFF\x16\xd9\x00\x00WEBPVP8X"), nil)
+	be.Err(t, err, ansimate.ErrBinary)
+}
+
 func TestAnimateBasic(t *testing.T) {
 	t.Parallel()
 	// Ansimation stream: write title, clear screen, write frame 2, clear screen, write frame 3
@@ -58,6 +65,23 @@ func TestAnimateBasic(t *testing.T) {
 	be.Equal(t, anim.CanvasHeight, ansimate.Rows*glyphH)
 	be.Equal(t, anim.LoopCount, 0)
 	be.True(t, len(anim.Frames) >= 1)
+}
+
+func TestAnimateBlink(t *testing.T) {
+	t.Parallel()
+	// Static ANSI screen with blinking text
+	ansiData := "\x1b[2J\x1b[1;1HWelcome to the BBS! Call \x1b[5m555-1234\x1b[0m today!"
+
+	var out bytes.Buffer
+	err := ansimate.Animate(&out, strings.NewReader(ansiData), nil)
+	be.Err(t, err, nil)
+	be.True(t, out.Len() > 0)
+
+	// Verify it generated exactly a 2-frame infinite loop animation
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.Equal(t, anim.LoopCount, 0)
+	be.Equal(t, len(anim.Frames), 2)
 }
 
 func TestAnimateCustomDimensions(t *testing.T) {

@@ -85,17 +85,12 @@ func run(w io.Writer, args ...string) error {
 	}
 
 	arg := fs.Args()
-	help := slices.ContainsFunc(arg, func(s string) bool {
-		// permit non-standard flags and positions for the help screen
-		// these include some undocumented flags for typos, guessing etc
-		return s == "-h" || s == "-help" || s == "--help" || s == "-?" || s == "/?"
-	})
 	if len(arg) == 0 {
 		printUsage(w)
 
 		return errNoInput
 	}
-	if help {
+	if help(arg) {
 		printUsage(w)
 
 		return nil
@@ -112,6 +107,19 @@ func run(w io.Writer, args ...string) error {
 	output := determine(input, fl.output, arg...)
 
 	return execute(w, input, output, &fl)
+}
+
+// Help allows for the use of non standard flags to bring up the usage information.
+// Which is less obnoxious than returning an error for first time users.
+func help(args []string) bool {
+	return slices.ContainsFunc(args, func(s string) bool {
+		switch s {
+		case "-h", "-help", "--help", "-?", "/?":
+			return true
+		default:
+			return false
+		}
+	})
 }
 
 func buildVersion() string {
@@ -244,14 +252,30 @@ func executeCheck(w io.Writer, input string) error {
 
 	ok, err := ansimate.Detect(f)
 	if err != nil {
+		if errors.Is(err, ansimate.ErrBinary) {
+			fmt.Fprintf(w, "%s: Binary file (not ANSI art)\n", filepath.Base(input))
+
+			return nil
+		}
+
 		return fmt.Errorf("detect: %w", err)
 	}
 
 	if ok {
 		fmt.Fprintf(w, "%s: ANSImation detected\n", filepath.Base(input))
-	} else {
-		fmt.Fprintf(w, "%s: Static ANSI art\n", filepath.Base(input))
+
+		return nil
 	}
+
+	_, _ = f.Seek(0, io.SeekStart)
+	hasBlink, _ := ansimate.DetectBlink(f)
+	if hasBlink {
+		fmt.Fprintf(w, "%s: Static ANSI art (blinking text detected)\n", filepath.Base(input))
+
+		return nil
+	}
+
+	fmt.Fprintf(w, "%s: Static ANSI art\n", filepath.Base(input))
 
 	return nil
 }
@@ -277,7 +301,10 @@ func execute(w io.Writer, input, output string, fl *flags) error {
 		_ = f.Close()
 	}()
 
-	reportDetection(w, f, input)
+	err = reportDetection(w, f, input)
+	if err != nil {
+		return err
+	}
 
 	fmt.Fprintf(w, "Converting %s -> %s (%d baud, %d fps)...\n",
 		filepath.Base(input), filepath.Base(output), cfg.BaudRate, cfg.FPS)
@@ -301,16 +328,33 @@ func execute(w io.Writer, input, output string, fl *flags) error {
 	return nil
 }
 
-func reportDetection(w io.Writer, f *os.File, input string) {
+func reportDetection(w io.Writer, f *os.File, input string) error {
 	ok, err := ansimate.Detect(f)
-	if err == nil {
-		if ok {
-			fmt.Fprintf(w, "Found an ANSImation in %s\n", filepath.Base(input))
-		} else {
-			fmt.Fprintf(w, "File: %s appears to be text or a static ANSI (converting anyway)\n", filepath.Base(input))
-		}
+	if err != nil {
+		return fmt.Errorf("detect: %w", err)
 	}
+
+	if ok {
+		fmt.Fprintf(w, "Found an ANSImation in %s\n", filepath.Base(input))
+		_, _ = f.Seek(0, io.SeekStart)
+
+		return nil
+	}
+
 	_, _ = f.Seek(0, io.SeekStart)
+	hasBlink, _ := ansimate.DetectBlink(f)
+	_, _ = f.Seek(0, io.SeekStart)
+
+	if hasBlink {
+		fmt.Fprintf(w, "Found static ANSI art with blinking text in %s (generating blinking animation)\n",
+			filepath.Base(input))
+
+		return nil
+	}
+
+	fmt.Fprintf(w, "File: %s appears to be text or a static ANSI (converting anyway)\n", filepath.Base(input))
+
+	return nil
 }
 
 func buildConfig(fl *flags) (*ansimate.Config, error) {

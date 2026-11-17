@@ -198,6 +198,15 @@ func TestTerminalSGR(t *testing.T) {
 	be.Equal(t, grid[0][3].Char, byte('Z'))
 	be.Equal(t, grid[0][3].FG, byte(7)) // default FG (7)
 	be.Equal(t, grid[0][3].BG, byte(0)) // default BG (0)
+
+	// Blink (SGR 5) and Blink Off (SGR 25)
+	be.Equal(t, term.HasBlink(), false)
+	_, _ = term.Write([]byte("\x1b[5mB\x1b[25mC"))
+	be.Equal(t, grid[0][4].Char, byte('B'))
+	be.Equal(t, grid[0][4].Blink, true)
+	be.Equal(t, grid[0][5].Char, byte('C'))
+	be.Equal(t, grid[0][5].Blink, false)
+	be.Equal(t, term.HasBlink(), true)
 }
 
 func TestTerminalScrollingAndWrapping(t *testing.T) {

@@ -18,7 +18,9 @@ const (
 
 	sgrReset     = 0
 	sgrBold      = 1
+	sgrBlink     = 5
 	sgrBoldOff   = 22
+	sgrBlinkOff  = 25
 	sgrFGStart   = 30
 	sgrFGEnd     = 37
 	sgrFGDefault = 39
@@ -59,6 +61,7 @@ type terminal struct {
 	pendingBG    byte
 	pendingClear bool
 	bold         bool
+	blink        bool
 	lineWrap     bool
 	dirty        bool
 	state        parserState
@@ -112,6 +115,19 @@ func (t *terminal) IsDirty() bool {
 // ResetDirty clears the dirty flag.
 func (t *terminal) ResetDirty() {
 	t.dirty = false
+}
+
+// HasBlink reports whether any visible non-space cell on the grid has the blink attribute.
+func (t *terminal) HasBlink() bool {
+	for _, row := range t.grid {
+		for _, c := range row {
+			if c.Blink && c.Char != ' ' && c.Char != 0 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // Write processes a byte slice of ANSI data.
@@ -373,6 +389,7 @@ func (t *terminal) sgr() {
 
 func (t *terminal) resetAttrs() {
 	t.bold = false
+	t.blink = false
 	t.curFG = defaultFG
 	t.curBG = defaultBG
 }
@@ -392,6 +409,10 @@ func (t *terminal) applySGRStyle(param int) bool {
 		t.bold = true
 	case sgrBoldOff:
 		t.bold = false
+	case sgrBlink:
+		t.blink = true
+	case sgrBlinkOff:
+		t.blink = false
 	default:
 		return false
 	}
@@ -447,9 +468,10 @@ func (t *terminal) writeChar(b byte) {
 	}
 
 	c := cell{
-		Char: b,
-		FG:   t.effectiveFG(),
-		BG:   t.curBG,
+		Char:  b,
+		FG:    t.effectiveFG(),
+		BG:    t.curBG,
+		Blink: t.blink,
 	}
 
 	t.grid[t.y][t.x] = c

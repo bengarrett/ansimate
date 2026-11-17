@@ -27,17 +27,27 @@ const (
 
 // cell represents a single character position on the screen.
 type cell struct {
-	Char byte
-	FG   byte
-	BG   byte
+	Char  byte
+	FG    byte
+	BG    byte
+	Blink bool
 }
 
 // drawCell renders a single character cell into the target image at the specified column and row.
 func drawCell(img *image.NRGBA, col, row int, c cell, pal [16]color.NRGBA) {
+	drawCellBlink(img, col, row, c, pal, true)
+}
+
+// drawCellBlink renders a single character cell, optionally blanking blinking characters.
+func drawCellBlink(img *image.NRGBA, col, row int, c cell, pal [16]color.NRGBA, blinkVisible bool) {
 	fgIdx := c.FG & maxColorIdx
 	bgIdx := c.BG & maxColorIdx
 	fg := pal[fgIdx]
 	bg := pal[bgIdx]
+
+	if c.Blink && !blinkVisible {
+		fg = bg
+	}
 
 	startX := col * glyphW
 	startY := row * glyphH
@@ -68,6 +78,11 @@ func drawCell(img *image.NRGBA, col, row int, c cell, pal [16]color.NRGBA) {
 
 // drawScreen renders an entire grid of cells into a new NRGBA image.
 func drawScreen(grid [][]cell, pal [16]color.NRGBA) *image.NRGBA {
+	return drawScreenBlink(grid, pal, true)
+}
+
+// drawScreenBlink renders an entire grid of cells into a new NRGBA image with blink visibility.
+func drawScreenBlink(grid [][]cell, pal [16]color.NRGBA, blinkVisible bool) *image.NRGBA {
 	cols := Cols
 	rows := Rows
 	if len(grid) > 0 {
@@ -78,16 +93,11 @@ func drawScreen(grid [][]cell, pal [16]color.NRGBA) *image.NRGBA {
 	}
 
 	img := image.NewNRGBA(image.Rect(0, 0, cols*glyphW, rows*glyphH))
-	drawScreenBuf(img, grid, pal)
-
-	return img
-}
-
-// drawScreenBuf renders an entire grid of cells into an existing NRGBA image.
-func drawScreenBuf(img *image.NRGBA, grid [][]cell, pal [16]color.NRGBA) {
 	for row, line := range grid {
 		for col, c := range line {
-			drawCell(img, col, row, c, pal)
+			drawCellBlink(img, col, row, c, pal, blinkVisible)
 		}
 	}
+
+	return img
 }

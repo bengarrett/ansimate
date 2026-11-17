@@ -1,6 +1,7 @@
 package ansimate
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"image/color"
@@ -16,15 +17,17 @@ var (
 	ErrNilWriter = errors.New("writer is nil")
 	ErrNilReader = errors.New("reader is nil")
 	ErrEmpty     = errors.New("input stream is empty")
+	ErrBinary    = errors.New("input is a binary file")
 )
 
 const (
-	BaudRate    = 19200            // BaudRate is the default simulated BBS transmission speed in bits per second.
-	FPS         = 20               // FPS is the default target frame rate.
-	MaxDuration = 30 * time.Second // MaxDuration is the default maximum playback time before stopping.
-	EndDelay    = 2 * time.Second  // EndDelay is the default pause time on the final frame before looping.
-	Cols        = 80               // Cols is the default terminal width in character cells.
-	Rows        = 25               // Rows is the default terminal height in character cells.
+	BaudRate    = 19200                  // BaudRate is the default simulated BBS transmission speed in bits per second.
+	FPS         = 20                     // FPS is the default target frame rate.
+	MaxDuration = 30 * time.Second       // MaxDuration is the default maximum playback time before stopping.
+	EndDelay    = 2 * time.Second        // EndDelay is the default pause time on the final frame before looping.
+	BlinkDelay  = 533 * time.Millisecond // BlinkDelay is the ~1.88 Hz IBM PC VGA hardware text blink rate.
+	Cols        = 80                     // Cols is the default terminal width in character cells.
+	Rows        = 25                     // Rows is the default terminal height in character cells.
 
 	bitsPerByte    = 10
 	maxFrames      = 500
@@ -102,9 +105,28 @@ func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 	}
 	c.sanitize()
 
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return fmt.Errorf("read: %w", err)
+	}
+	if len(data) == 0 {
+		return ErrEmpty
+	}
+	if binary(data) {
+		return ErrBinary
+	}
+
+	if !DetectB(data) {
+		term := newTerminal(c.Columns, c.Rows)
+		_, _ = term.Write(data)
+		if term.HasBlink() {
+			return c.animateBlink(w, term)
+		}
+	}
+
 	animation := c.animate(w)
 
-	return animation.run(r)
+	return animation.run(bytes.NewReader(data))
 }
 
 type animator struct {
@@ -144,6 +166,37 @@ func (c *Config) animate(w io.Writer) *animator {
 	}
 }
 
+func (c *Config) animateBlink(w io.Writer, term *terminal) error {
+	opts := &animation.EncodeOptions{
+		LoopCount:       0,
+		Lossless:        !c.Lossy,
+		BackgroundColor: c.Palette[0],
+	}
+
+	canvasW := c.Columns * glyphW
+	canvasH := c.Rows * glyphH
+	encoder := animation.NewEncoder(w, canvasW, canvasH, opts)
+
+	frameOn := drawScreenBlink(term.Grid(), c.Palette, true)
+	err := encoder.AddFrame(frameOn, BlinkDelay)
+	if err != nil {
+		return fmt.Errorf("add blink frame on: %w", err)
+	}
+
+	frameOff := drawScreenBlink(term.Grid(), c.Palette, false)
+	err = encoder.AddFrame(frameOff, BlinkDelay)
+	if err != nil {
+		return fmt.Errorf("add blink frame off: %w", err)
+	}
+
+	err = encoder.Close()
+	if err != nil {
+		return fmt.Errorf("close blink encoder: %w", err)
+	}
+
+	return nil
+}
+
 func (a *animator) run(r io.Reader) error {
 	buf := make([]byte, a.bytesPerTick)
 	var duration time.Duration
@@ -153,14 +206,11 @@ func (a *animator) run(r io.Reader) error {
 		n, err := r.Read(buf)
 		if n > 0 {
 			bytesRead += n
-			_, _ = a.term.Write(buf[:n])
-			if a.term.IsDirty() {
-				errAdd := a.addFrame(a.tick)
-				if errAdd != nil {
-					return errAdd
-				}
-				duration += a.tick
+			added, errStep := a.step(buf[:n], bytesRead)
+			if errStep != nil {
+				return errStep
 			}
+			duration += added
 		}
 
 		if err != nil {
@@ -181,6 +231,35 @@ func (a *animator) run(r io.Reader) error {
 	}
 
 	return a.finalize()
+}
+
+func (a *animator) step(chunk []byte, bytesRead int) (time.Duration, error) {
+	err := a.processChunk(chunk, bytesRead)
+	if err != nil {
+		return 0, err
+	}
+	if a.term.IsDirty() {
+		errAdd := a.addFrame(a.tick)
+		if errAdd != nil {
+			return 0, errAdd
+		}
+
+		return a.tick, nil
+	}
+
+	return 0, nil
+}
+
+func (a *animator) processChunk(chunk []byte, bytesRead int) error {
+	if bytesRead <= sauceRecordLen {
+		trimmed := bytes.TrimRight(chunk, "\x00\x1a\x20")
+		if bytes.IndexByte(trimmed, asciiNUL) != -1 {
+			return ErrBinary
+		}
+	}
+	_, _ = a.term.Write(chunk)
+
+	return nil
 }
 
 func (a *animator) addFrame(dur time.Duration) error {

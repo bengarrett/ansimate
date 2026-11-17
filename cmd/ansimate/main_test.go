@@ -50,6 +50,16 @@ func TestCLICheck(t *testing.T) {
 	err = run(&buf, "-check", ansFile)
 	be.Err(t, err, nil)
 	be.True(t, strings.Contains(buf.String(), "ANSImation detected"))
+
+	// Test static ANSI art with blinking text
+	blinkFile := filepath.Join(tmpDir, "blink.ans")
+	err = os.WriteFile(blinkFile, []byte("\x1b[2J\x1b[1;1HCall BBS \x1b[5m555-1234\x1b[0m"), 0o600)
+	be.Err(t, err, nil)
+
+	var buf2 bytes.Buffer
+	err = run(&buf2, "-check", blinkFile)
+	be.Err(t, err, nil)
+	be.True(t, strings.Contains(buf2.String(), "blinking text detected"))
 }
 
 func TestCLIConvert(t *testing.T) {
@@ -113,4 +123,21 @@ func TestCLIFlagsAndErrors(t *testing.T) {
 	be.True(t, err != nil)
 	_, statErr = os.Stat(emptyOut)
 	be.True(t, os.IsNotExist(statErr))
+
+	// Binary file fails and does not produce an output file
+	binFile := filepath.Join(tmpDir, "sample.bin")
+	err = os.WriteFile(binFile, []byte("RIFF\x00\x00\x00\x00WEBP"), 0o600)
+	be.Err(t, err, nil)
+	binOut := filepath.Join(tmpDir, "sample.webp")
+	var binBuf bytes.Buffer
+	err = run(&binBuf, binFile, binOut)
+	be.True(t, err != nil)
+	_, statErr = os.Stat(binOut)
+	be.True(t, os.IsNotExist(statErr))
+
+	// Check on binary file reports binary
+	var checkBuf bytes.Buffer
+	err = run(&checkBuf, "-check", binFile)
+	be.Err(t, err, nil)
+	be.True(t, strings.Contains(checkBuf.String(), "Binary file (not ANSI art)"))
 }
