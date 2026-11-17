@@ -2,6 +2,7 @@ package ansimate_test
 
 import (
 	"bytes"
+	"image"
 	"strings"
 	"testing"
 	"time"
@@ -128,4 +129,70 @@ func TestAnimateClampedBounds(t *testing.T) {
 	be.Err(t, err, nil)
 	be.Equal(t, anim.CanvasWidth, clampedCols*glyphW)
 	be.Equal(t, anim.CanvasHeight, clampedRows*glyphH)
+}
+
+func TestAnimateCGAEndDelay(t *testing.T) {
+	t.Parallel()
+	// Multi-frame animation across multiple ticks.
+	ansiData := "\x1b[2J\x1b[1;1HFrame 1\r\n\x1b[2J\x1b[1;1HFrame 2"
+
+	var outCGA bytes.Buffer
+	cfgCGA := &ansimate.Config{
+		BaudRate: 300, // 3 bytes per tick to ensure multiple content frames
+		FPS:      10,
+		EndDelay: 500 * time.Millisecond,
+		CGA:      true,
+	}
+	err := ansimate.Animate(&outCGA, strings.NewReader(ansiData), cfgCGA)
+	be.Err(t, err, nil)
+
+	animCGA, err := animation.DecodeBytes(outCGA.Bytes())
+	be.Err(t, err, nil)
+	be.True(t, len(animCGA.Frames) >= 2)
+	err = animCGA.DecodeFrames()
+	be.Err(t, err, nil)
+
+	// In CGA mode, the last frame must have its duration extended by EndDelay (500ms)
+	// and its pixels must match CGA rendering, not VGA.
+	lastFrame := animCGA.Frames[len(animCGA.Frames)-1]
+	be.True(t, lastFrame.Duration >= 500*time.Millisecond)
+
+	// Animate the same with CGA: false (VGA font).
+	var outVGA bytes.Buffer
+	cfgVGA := &ansimate.Config{
+		BaudRate: 300,
+		FPS:      10,
+		EndDelay: 500 * time.Millisecond,
+		CGA:      false,
+	}
+	err = ansimate.Animate(&outVGA, strings.NewReader(ansiData), cfgVGA)
+	be.Err(t, err, nil)
+
+	animVGA, err := animation.DecodeBytes(outVGA.Bytes())
+	be.Err(t, err, nil)
+	err = animVGA.DecodeFrames()
+	be.Err(t, err, nil)
+	lastFrameVGA := animVGA.Frames[len(animVGA.Frames)-1]
+
+	// The CGA final frame and VGA final frame must have different pixels.
+	be.True(t, !imagesEqual(lastFrame.Image, lastFrameVGA.Image))
+}
+
+func imagesEqual(a, b image.Image) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.Bounds() != b.Bounds() {
+		return false
+	}
+	bnds := a.Bounds()
+	for y := bnds.Min.Y; y < bnds.Max.Y; y++ {
+		for x := bnds.Min.X; x < bnds.Max.X; x++ {
+			if a.At(x, y) != b.At(x, y) {
+				return false
+			}
+		}
+	}
+
+	return true
 }

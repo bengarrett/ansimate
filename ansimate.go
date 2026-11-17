@@ -281,7 +281,7 @@ func (a *animator) finalize() error {
 	}
 
 	if a.cfg.EndDelay > 0 {
-		img := drawScreen(a.term.Grid(), a.cfg.Palette)
+		img := drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
 		err := a.encoder.AddFrame(img, a.cfg.EndDelay)
 		if err != nil {
 			return fmt.Errorf("add final delay: %w", err)

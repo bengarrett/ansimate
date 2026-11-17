@@ -13,6 +13,29 @@ ANSImate converts continuous ANSI streams (ANSimations) found in the PC BBS and 
 - Heuristic and SAUCE detection to distinguish dynamic animations from static ANSI artworks.
 - ANSI.SYS terminal support including cursor positioning, movements (`CSI A-D`), screen/line clearing, and SGR colors.
 
+#### ANSImation?
+
+ANSI escape codes are a terminal standard that goes back to minicomputers of the late 1970s. On 16-bit microcomputers, it became popular on online bulletin boards later in the 1980s. This allowed boards to offer color, cursor movement, and overall more striking user interfaces, though it came at the expense of complexity. The creators of these interfaces evolved into artists drawing adverts for these bulletin boards, and popular drawing tools of the era like [The Draw](https://winworldpc.com/product/the-draw/3x) allowed for the creation of streaming ANSI art files, to display the artwork onscreen as they were downloaded over slow, copper telephone lines.
+
+We first started seeing ANSI artists using the blink character options to add visual movement to their otherwise static art. And I would guess this evolved into exploring the ability to control the text cursor movement to generate animations. These animations initially started as TV and movie-style screen wipes and later expanded in complexity into moving adverts and animated comic strips, and these became known as ANSImations.
+
+[![Blinking text example](readme/BBS.webp)](https://defacto2.net/f/ba2bcbb)
+
+_1985 advert for The Game Gallery BBS_
+
+[![Early ANSImation example](readme/WELCOME.webp)](https://defacto2.net/f/b21a2ed)
+
+_1988 advert for the Pass It On BBS_
+
+[![ANSImation](readme/HOLIC2.webp)](https://defacto2.net/f/ac2c5c0)
+
+_1991 advert for the BBS-a-Holic BBS by RaD Man_
+
+<small>
+  The example images were created using ANSImate, however, the &copy; belongs to their authors.
+  These authors do not endorse ANSImate and permission for their use in this article was never asked.
+</small>
+
 #### Quick Usage
 
 Convert an ANSImation ANSI file to an web-friendly, animated WebP image.
