@@ -13,14 +13,23 @@ tasks:
     cmds:
       - task --list-all
     silent: true
+  build:
+    desc: 'Build the ansimate binary.'
+    cmds:
+      - go build -v -trimpath -ldflags="-s -w" -o ansimate ./cmd/ansimate
+  build-wasm:
+    desc: 'Build the ansimate WASM binaries.'
+    cmds:
+      - cmd: GOOS=wasip1 GOARCH=wasm go build -v -trimpath -ldflags="-s -w" -o ansimate.wasm ./cmd/ansimate
+      - cmd: GOOS=js GOARCH=wasm go build -v -trimpath -ldflags="-s -w" -o ansimate-web.wasm ./cmd/ansimate-web
   doc:
-    desc: 'Generate and browse the application module documentation.'
+    desc: 'Read the Go package documentation.'
     cmds:
       - cmd: pkgsite -http localhost:8090
     silent: true
   lint:
     silent: false
-    desc: Runs the go formatter and lints the source code.
+    desc: Runs the Go formatter and lints the source code.
     ignore_error: true
     cmds:
       - cmd: clear
@@ -30,29 +39,43 @@ tasks:
       - cmd: go fix ./...
       - cmd: gofumpt -l -w .
       - cmd: golangci-lint run -c .golangci.yaml
-  pkg-patch:
-    aliases:
-      - 'patch'
+  lint-js:
     silent: false
-    desc: Update and apply patches to the web server dependencies.
+    desc: Lint the CSS and JS.
+    ignore_error: true
+    dir: web
+    cmds:
+      - cmd: clear
+        platforms: [linux, darwin, freebsd]
+      - cmd: pnpm exec eslint .
+      - cmd: pnpm exec stylelint --fix *.css
+      - cmd: pnpm exec htmlhint *.html
+  pkg-patch:
+    silent: false
+    desc: Update and apply patch the Go dependencies.
     cmds:
       - cmd: go get -u=patch -x
       - cmd: go mod verify
       - cmd: go mod tidy
   pkg-update:
-    aliases:
-      - 'update'
     silent: false
-    desc: Update the web server dependencies.
+    desc: Update the Go dependencies.
     cmds:
       - cmd: go get -u -x
       - cmd: go get go.uber.org/nilaway/cmd/nilaway@latest
       - cmd: go mod verify
       - cmd: go mod tidy
-  build:
-    desc: 'Build the ansimate binary.'
+  pkg-js:
+    desc: Update to the latest JS dependencies.
+    dir: web
     cmds:
-      - go build -v -trimpath -ldflags="-s -w" -o ansimate ./cmd/ansimate
+      - cmd: pnpm up --interactive --latest
+  serve:
+    desc: 'Run a local HTTP server for web/.'
+    cmds:
+      - cmd: GOOS=js GOARCH=wasm go build -v -trimpath -ldflags="-s -w" -o web/ansimate-web.wasm ./cmd/ansimate-web
+      - cmd: cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/
+      - cmd: go run web/serve.go
   test:
     desc: 'Run the test suite.'
     cmds:

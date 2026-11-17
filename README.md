@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/bengarrett/ansimate.svg)](https://pkg.go.dev/github.com/bengarrett/ansimate)
 
-ANSImate converts continuous ANSI streams (ANSImations) found in the PC BBS and MS-DOS era into lightweight, lossless animated WebP images in pure Go.
+ANSImate converts continuous ANSI streams (ANSImations) found in the PC BBS and MS-DOS era into lightweight, lossless animated WebP images. [Check out the live web demo](https://bengarrett.github.io/ansimate/).
 
 #### Features
 
@@ -12,6 +12,7 @@ ANSImate converts continuous ANSI streams (ANSImations) found in the PC BBS and 
 - Lossless animated WebP output.
 - Heuristic and SAUCE detection to distinguish dynamic animations from regular ANSI artworks.
 - MS-DOS, ANSI.SYS terminal support including cursor positioning, movements (`CSI A-D`), screen/line clearing, and SGR colors.
+- WebAssembly support for standalone runtimes and browser client-side conversion.
 
 #### ANSImation?
 
@@ -61,7 +62,21 @@ go build .
 ./ansimate -baud 28800 -fps 20 -delay 3.0s -palette mono animation.ans output.webp
 ```
 
-#### Package, Quick Usage
+#### WebAssembly
+
+#### [Download binaries](https://github.com/bengarrett/ansimate/releases/latest)
+
+`ansimate.wasm` can be used with [Wasmtime](https://wasmtime.dev/), and other runtimes:
+
+```bash
+wasmtime run --dir=. ansimate.wasm -- input.ans output.webp
+```
+
+`ansimate-web.wasm` can be combined with JS for use in web browsers. See [cmd/ansimate-web/README](cmd/ansimate-web/README.md)).
+
+And, [there is also the live demo](https://bengarrett.github.io/ansimate/).
+
+#### Go Package, Quick Usage
 
 Convert an ANSImation ANSI file to an web-friendly, animated WebP image.
 
