@@ -105,6 +105,15 @@ func TestCLIFlagsAndErrors(t *testing.T) {
 	be.Err(t, err, nil)
 	be.True(t, st.Size() > 0)
 
+	// Valid CGA flag
+	cgaOut := filepath.Join(tmpDir, "cga.webp")
+	var cgaBuf bytes.Buffer
+	err = run(&cgaBuf, "-cga", ansFile, cgaOut)
+	be.Err(t, err, nil)
+	stCGA, err := os.Stat(cgaOut)
+	be.Err(t, err, nil)
+	be.True(t, stCGA.Size() > 0)
+
 	// Invalid palette returns errUnknownPalette and does not create output file
 	badOut := filepath.Join(tmpDir, "bad.webp")
 	var badBuf bytes.Buffer

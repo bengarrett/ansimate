@@ -49,6 +49,7 @@ type Config struct {
 	Columns     int             // Columns is the terminal width in character cells (default 80, max 160).
 	Rows        int             // Rows is the terminal height in character cells (default 25, max 100).
 	Lossy       bool            // Lossy enables lossy WebP compression (default false).
+	CGA         bool            // CGA uses the 8x8 IBM CGA font (scanline-doubled to 4:3 aspect ratio).
 	Palette     [16]color.NRGBA // Palette is optional (default PaletteVGA).
 }
 
@@ -177,13 +178,13 @@ func (c *Config) animateBlink(w io.Writer, term *terminal) error {
 	canvasH := c.Rows * glyphH
 	encoder := animation.NewEncoder(w, canvasW, canvasH, opts)
 
-	frameOn := drawScreenBlink(term.Grid(), c.Palette, true)
+	frameOn := drawScreenFont(term.Grid(), c.Palette, true, c.CGA)
 	err := encoder.AddFrame(frameOn, BlinkDelay)
 	if err != nil {
 		return fmt.Errorf("add blink frame on: %w", err)
 	}
 
-	frameOff := drawScreenBlink(term.Grid(), c.Palette, false)
+	frameOff := drawScreenFont(term.Grid(), c.Palette, false, c.CGA)
 	err = encoder.AddFrame(frameOff, BlinkDelay)
 	if err != nil {
 		return fmt.Errorf("add blink frame off: %w", err)
@@ -263,7 +264,7 @@ func (a *animator) processChunk(chunk []byte, bytesRead int) error {
 }
 
 func (a *animator) addFrame(dur time.Duration) error {
-	img := drawScreen(a.term.Grid(), a.cfg.Palette)
+	img := drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
 	err := a.encoder.AddFrame(img, dur)
 	if err != nil {
 		return fmt.Errorf("add frame: %w", err)

@@ -13,6 +13,9 @@ func TestFontData(t *testing.T) {
 	be.Equal(t, glyphW, 8)
 	be.Equal(t, glyphH, 16)
 	be.Equal(t, glyphL, 16)
+	be.Equal(t, cgaGlyphL, 8)
+	be.Equal(t, cgaScaleY, 2)
+	be.Equal(t, len(fontCGA8x8), 2048)
 	be.Equal(t, canvasW, 640)
 	be.Equal(t, canvasH, 400)
 }
@@ -77,6 +80,20 @@ func TestDrawCell(t *testing.T) {
 		for x := range glyphW {
 			c := img.NRGBAAt(glyphW+x, y)
 			be.Equal(t, c, pal[bgBlue])
+		}
+	}
+
+	// Draw full block (0xDB) with CGA font (scanline-doubled)
+	imgCGA := image.NewNRGBA(image.Rect(0, 0, 16, 32))
+	drawCellBlink(imgCGA, 0, 0, cell{
+		Char: 0xdb,
+		FG:   fgWhite,
+		BG:   bgBlue,
+	}, pal, true, true)
+	for y := range glyphH {
+		for x := range glyphW {
+			c := imgCGA.NRGBAAt(x, y)
+			be.Equal(t, c, pal[fgWhite])
 		}
 	}
 }

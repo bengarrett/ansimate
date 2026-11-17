@@ -6,7 +6,7 @@ This document details the historical specifications, technical standards, extern
 
 ---
 
-- **IBM PC BIOS ROM VGA 8×16 Font (`font_vga_8x16.bin`)**
+- **IBM PC BIOS ROM Fonts**
   - Extracted directly from **SeaVGABIOS**"
     `/usr/share/seavgabios/vgabios-stdvga.bin`, from the open-source [SeaBIOS](https://www.seabios.org/SeaVGABIOS.html) project)
   - Originates from the public domain [`fntcol16.zip`](https://github.com/dokkaebi-project/font-archive) collection compiled by Joseph Gil on Simtel.Net.

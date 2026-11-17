@@ -44,6 +44,7 @@ type flags struct {
 	delay    time.Duration
 	maximum  time.Duration
 	lossy    bool
+	cga      bool
 	quiet    bool
 	noOW     bool
 	check    bool
@@ -210,6 +211,8 @@ func setupFlags(fs *flag.FlagSet, fl *flags) {
 		"Maximum animation duration cap")
 	fs.BoolVar(&fl.lossy, "lossy", false,
 		"Enable lossy WebP compression (not recommended)")
+	fs.BoolVar(&fl.cga, "cga", false,
+		"Use 8x8 IBM CGA font instead of 8x16 VGA font")
 	fs.BoolVar(&fl.check, "c", false,
 		"Only detect if file is an ANSImation without converting")
 	fs.BoolVar(&fl.check, "check", false,
@@ -378,6 +381,7 @@ func buildConfig(fl *flags) (*ansimate.Config, error) {
 		MaxDuration: fl.maximum,
 		EndDelay:    fl.delay,
 		Lossy:       fl.lossy,
+		CGA:         fl.cga,
 		Palette:     pal,
 	}, nil
 }
@@ -425,6 +429,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  -delay <duration>    Duration to hold final frame before looping (default 2s)")
 	fmt.Fprintln(w, "  -max <duration>      Maximum animation duration cap (default 30s)")
 	fmt.Fprintln(w, "  -lossy               Use lossy compression (usually not recommended)")
+	fmt.Fprintln(w, "  -cga                 Use 8x8 IBM CGA font instead of 8x16 VGA font")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Examples:")
 	fmt.Fprintln(w, "  ansimate animation.ans")
