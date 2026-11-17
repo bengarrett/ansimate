@@ -12,7 +12,8 @@ before:
     # You may remove this if you don't use go modules.
     - go mod tidy
 builds:
-  - main: ./cmd/ansimate
+  - id: ansimate
+    main: ./cmd/ansimate
     env:
       - CGO_ENABLED=0
     flags:
@@ -31,8 +32,36 @@ builds:
         goarch: '386'
       - goos: linux
         goarch: 'arm64'
+
+  - id: wasi
+    main: ./cmd/ansimate
+    binary: ansimate
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - wasip1
+    goarch:
+      - wasm
+
+  - id: web
+    main: ./cmd/ansimate-web
+    binary: ansimate-web
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - js
+    goarch:
+      - wasm
+
 archives:
-  - formats: ['tgz']
+  - id: native
+    ids:
+      - ansimate
+    formats: ['tgz']
     files:
       - LICENSE
       - README*
@@ -43,8 +72,21 @@ archives:
     format_overrides:
       - goos: windows
         formats: ['zip']
+
+  - id: wasm
+    ids:
+      - wasi
+      - web
+    name_template: '{{ .Binary }}_wasm_{{ .Version }}'
+    formats: ['tgz']
+    files:
+      - LICENSE
+      - README*
+
 nfpms:
   - id: Linux
+    ids:
+      - ansimate
     package_name: 'ansimate'
     file_name_template: 'ansimate'
     vendor: Ben Garrett
@@ -64,14 +106,14 @@ changelog:
       - '^docs:'
       - '^test:'
 release:
-  footer: >-
+  footer: |-
     ---
 
     ANSImate uses standalone portable binaries, needs no dependencies, and requires no installation.
 
     macOS and Linux users can install via Homebrew:
 
-    ```
+    ```bash
     brew tap bengarrett/ansimate https://github.com/bengarrett/ansimate
     brew install bengarrett/ansimate/ansimate
     ```
