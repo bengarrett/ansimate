@@ -64,6 +64,14 @@ func TestTerminalControlCodes(t *testing.T) {
 	err := term.WriteByte('!')
 	be.Err(t, err, nil)
 	be.Equal(t, grid[0][9].Char, byte('!'))
+
+	// Form feed (0x0C) clears screen with current background color and homes cursor,
+	// while ignoring a trailing 0x0C if no characters follow.
+	_, _ = term.Write([]byte("\x1b[44m\x0cZ\x1b[0m\x0c"))
+	be.Equal(t, grid[0][0].Char, byte('Z'))
+	be.Equal(t, grid[0][0].BG, byte(4))
+	be.Equal(t, grid[0][1].Char, byte(' '))
+	be.Equal(t, grid[0][1].BG, byte(4))
 }
 
 func TestTerminalCursorPosition(t *testing.T) {

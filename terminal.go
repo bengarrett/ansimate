@@ -5,6 +5,7 @@ const (
 	asciiBS    = 0x08
 	asciiTAB   = 0x09
 	asciiLF    = 0x0a
+	asciiFF    = 0x0c
 	asciiCR    = 0x0d
 	asciiEOF   = 0x1a
 	asciiESC   = 0x1b
@@ -45,22 +46,24 @@ const (
 
 // terminal simulates a fixed-dimension character grid with ANSI escape code processing.
 type terminal struct {
-	grid     [][]cell
-	params   []int
-	cols     int
-	rows     int
-	x        int
-	y        int
-	savedX   int
-	savedY   int
-	curFG    byte
-	curBG    byte
-	bold     bool
-	lineWrap bool
-	dirty    bool
-	state    parserState
-	curParam int
-	hasParam bool
+	grid         [][]cell
+	params       []int
+	cols         int
+	rows         int
+	x            int
+	y            int
+	savedX       int
+	savedY       int
+	curFG        byte
+	curBG        byte
+	pendingBG    byte
+	pendingClear bool
+	bold         bool
+	lineWrap     bool
+	dirty        bool
+	state        parserState
+	curParam     int
+	hasParam     bool
 }
 
 // newTerminal creates a new terminal instance with specified columns and rows.
@@ -89,15 +92,10 @@ func newTerminal(cols, rows int) *terminal {
 
 // Clear clears the terminal grid and resets the cursor to (0, 0).
 func (t *terminal) Clear() {
-	blank := cell{Char: ' ', FG: defaultFG, BG: defaultBG}
-	for r := range t.rows {
-		t.grid[r] = make([]cell, t.cols)
-		for c := range t.cols {
-			t.grid[r][c] = blank
-		}
-	}
+	t.clearGrid(defaultBG)
 	t.x = 0
 	t.y = 0
+	t.pendingClear = false
 	t.dirty = true
 }
 
@@ -132,6 +130,18 @@ func (t *terminal) WriteByte(b byte) error {
 	return nil
 }
 
+func (t *terminal) clearGrid(bg byte) {
+	blank := cell{Char: ' ', FG: defaultFG, BG: bg}
+	for r := range t.rows {
+		if t.grid[r] == nil {
+			t.grid[r] = make([]cell, t.cols)
+		}
+		for c := range t.cols {
+			t.grid[r][c] = blank
+		}
+	}
+}
+
 func (t *terminal) processByte(b byte) {
 	switch t.state {
 	case stateNormal:
@@ -151,6 +161,8 @@ func (t *terminal) processNormal(b byte) {
 		// ignore
 	case asciiESC:
 		t.state = stateEscape
+	case asciiFF:
+		t.formFeed()
 	case asciiCR:
 		t.x = 0
 	case asciiLF:
@@ -164,6 +176,13 @@ func (t *terminal) processNormal(b byte) {
 	default:
 		t.writeChar(b)
 	}
+}
+
+func (t *terminal) formFeed() {
+	t.pendingClear = true
+	t.pendingBG = t.curBG
+	t.x = 0
+	t.y = 0
 }
 
 func (t *terminal) processEscape(b byte) {
@@ -285,7 +304,10 @@ func (t *terminal) eraseDisplay() {
 	case eraseToStart:
 		t.eraseDisplayToStart(blank)
 	case eraseAll:
-		t.Clear()
+		t.clearGrid(t.curBG)
+		t.x = 0
+		t.y = 0
+		t.pendingClear = false
 	}
 	t.dirty = true
 }
@@ -419,6 +441,11 @@ func (t *terminal) effectiveFG() byte {
 }
 
 func (t *terminal) writeChar(b byte) {
+	if t.pendingClear {
+		t.clearGrid(t.pendingBG)
+		t.pendingClear = false
+	}
+
 	c := cell{
 		Char: b,
 		FG:   t.effectiveFG(),

@@ -54,7 +54,8 @@ func DetectB(data []byte) bool {
 	//    left-to-right, top-to-bottom streams produce zero backtracks or overwrites.
 	//
 	//    A stream is classified as an ANSImation as soon as any threshold is met:
-	//    - Multi-clear transitions (clears >= 2): multiple \x1b[2J screen clears.
+	//    - Multi-clear transitions (clears >= 2): multiple \x1b[2J or 0x0C (Form
+	//      Feed) screen clears.
 	//    - Cell overwrites (backtracks >= 5 && overwrites >= 25): cursor rewinds to
 	//      an earlier screen coordinate and overwrites existing non-space cells.
 	//    - Choreographed construction (backtracks >= 100): non-linear drawing order
@@ -93,21 +94,22 @@ func checkSAUCE(data []byte) bool {
 }
 
 type detector struct {
-	grid       [Rows][Cols]byte
-	params     []int
-	x          int
-	y          int
-	savedX     int
-	savedY     int
-	lastWriteX int
-	lastWriteY int
-	clears     int
-	backtracks int
-	overwrites int
-	lineWrap   bool
-	state      parserState
-	curParam   int
-	hasParam   bool
+	grid         [Rows][Cols]byte
+	params       []int
+	x            int
+	y            int
+	savedX       int
+	savedY       int
+	lastWriteX   int
+	lastWriteY   int
+	clears       int
+	backtracks   int
+	overwrites   int
+	pendingClear bool
+	lineWrap     bool
+	state        parserState
+	curParam     int
+	hasParam     bool
 }
 
 func checkHeuristics(data []byte) bool {
@@ -171,6 +173,10 @@ func (d *detector) control(b byte) bool {
 	case asciiNUL, asciiEOF:
 	case asciiESC:
 		d.state = stateEscape
+	case asciiFF:
+		d.pendingClear = true
+		d.x = 0
+		d.y = 0
 	case asciiCR:
 		d.x = 0
 	case asciiLF:
@@ -310,13 +316,18 @@ func (d *detector) eraseDisplay() {
 	case eraseToStart:
 		d.eraseDisplayToStart()
 	case eraseAll:
-		d.clears++
-		d.grid = [Rows][Cols]byte{}
-		d.x = 0
-		d.y = 0
-		d.lastWriteX = -1
-		d.lastWriteY = -1
+		d.clearScreen()
 	}
+}
+
+func (d *detector) clearScreen() {
+	d.clears++
+	d.grid = [Rows][Cols]byte{}
+	d.x = 0
+	d.y = 0
+	d.lastWriteX = -1
+	d.lastWriteY = -1
+	d.pendingClear = false
 }
 
 func (d *detector) eraseDisplayToEnd() {
@@ -374,6 +385,14 @@ func (d *detector) writeChar(b byte) {
 }
 
 func (d *detector) recordWrite(b byte) {
+	if d.pendingClear {
+		d.clears++
+		d.grid = [Rows][Cols]byte{}
+		d.lastWriteX = -1
+		d.lastWriteY = -1
+		d.pendingClear = false
+	}
+
 	if d.lastWriteY >= 0 {
 		if d.y < d.lastWriteY || (d.y == d.lastWriteY && d.x <= d.lastWriteX) {
 			d.backtracks++
