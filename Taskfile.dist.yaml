@@ -7,6 +7,9 @@
 # $ task --list
 #
 version: '3'
+vars:
+  VER:
+    sh: git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || git rev-parse --short HEAD
 tasks:
   default:
     desc: 'Task runner for the helper package.'
@@ -16,12 +19,12 @@ tasks:
   build:
     desc: 'Build the ansimate binary.'
     cmds:
-      - go build -v -trimpath -ldflags="-s -w" -o ansimate ./cmd/ansimate
+      - go build -v -trimpath -ldflags="-s -w -X main.version={{.VER}}" -o ansimate ./cmd/ansimate
   build-wasm:
     desc: 'Build the ansimate WASM binaries.'
     cmds:
-      - cmd: GOOS=wasip1 GOARCH=wasm go build -v -trimpath -ldflags="-s -w" -o ansimate.wasm ./cmd/ansimate
-      - cmd: GOOS=js GOARCH=wasm go build -v -trimpath -ldflags="-s -w" -o ansimate-web.wasm ./cmd/ansimate-web
+      - cmd: GOOS=wasip1 GOARCH=wasm go build -v -trimpath -ldflags="-s -w -X main.version={{.VER}}" -o ansimate.wasm ./cmd/ansimate
+      - cmd: GOOS=js GOARCH=wasm go build -v -trimpath -ldflags="-s -w -X main.version={{.VER}}" -o ansimate-web.wasm ./cmd/ansimate-web
   doc:
     desc: 'Read the Go package documentation.'
     cmds:
@@ -73,7 +76,7 @@ tasks:
   serve:
     desc: 'Run a local HTTP server for web/.'
     cmds:
-      - cmd: GOOS=js GOARCH=wasm go build -v -trimpath -ldflags="-s -w" -o web/ansimate-web.wasm ./cmd/ansimate-web
+      - cmd: GOOS=js GOARCH=wasm go build -v -trimpath -ldflags="-s -w -X main.version={{.VER}}" -o web/ansimate-web.wasm ./cmd/ansimate-web
       - cmd: cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/
       - cmd: go run web/serve.go
   test:

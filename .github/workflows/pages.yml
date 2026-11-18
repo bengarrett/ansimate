@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -40,9 +42,11 @@ jobs:
       - name: Build WebAssembly & Bundle Assets
         run: |
           set -euo pipefail
+          VER=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)
+          VER=${VER#v}
 
           # 1. Compile in-browser WASM binary
-          GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o web/ansimate-web.wasm ./cmd/ansimate-web
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w -X main.version=${VER}" -o web/ansimate-web.wasm ./cmd/ansimate-web
 
           # 2. Copy Go's official wasm_exec.js runtime bridge
           cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/
