@@ -78,7 +78,7 @@ And, [there is also the live demo](https://bengarrett.github.io/ansimate/).
 
 #### Go Package, Quick Usage
 
-Convert an ANSImation ANSI file to an web-friendly, animated WebP image.
+Convert an ANSImation ANSI file to a web friendly, animated WebP image.
 
 ```go
 package main
@@ -143,10 +143,10 @@ err := ansimate.Animate(output, input, cfg)
 
 #### Art
 
-- There is a large collection of easy to navigate art on [Defacto2](https://defacto2.net/files/ansi), ordered by year. With the years between 1988 - 1993 most likely to offer animations.
+- There is a large collection of easy to navigate art on [Defacto2](https://defacto2.net/files/ansi), ordered by year.
 - [16colo.rs](https://16colo.rs/tags/content/ansimation) has hundreds of art tagged as ansimation.
 
-Just remember, many of these works were by edgy or nerd kids and young adults of the 1980-90s, online using computers, long before it was mainstream. So plenty of drawings lean heavily into cartoons, comic book characters, and teen humour.
+Just remember, many of these works were by edgy or nerd kids and young adults of the 1980-90s, online using computers, long before it was mainstream. So plenty of drawings lean heavily into cartoons, comic book characters, and teen boy humour.
 
 ### License
 
