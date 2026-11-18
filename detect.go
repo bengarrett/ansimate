@@ -8,10 +8,16 @@ import (
 )
 
 const (
+	// minChurn is the minimum number animations that draw out of order.
+	// Out of order refers to the task of jumping to different parts of the
+	// terminal screen to draw text or characters. The value is used to
+	// detect ANSImations vs standard ANSI drawings. But a two low or high value
+	// can lead to false positives.
+	minChurn = 75
+
 	minBacktracks = 5
 	minOverwrites = 25
 	minClears     = 2
-	minChurn      = 100
 
 	sauceRecordLen  = 128
 	sauceTagLen     = 5
