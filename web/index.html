@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ANSImate</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="wasm_exec.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="header-title">
+          <h1>ANSImate</h1>
+        </div>
+        <p class="subtitle">
+          Preview and convert BBS era, ANSI animations (ANSImations) into
+          animated WebP images. But, you can also convert regular ANSI art to
+          display like on an old PC or MS-DOS terminal. And this is all done
+          locally on your machine.
+          <a
+            href="https://github.com/bengarrett/ansimate"
+            target="_blank"
+            rel="noopener"
+            >ANSImate is avaliable as a terminal app, WASM, and a Go package.</a
+          >
+        </p>
+        <code id="wasmStatus">Loading WASM...</code>
+      </header>
+
+      <main class="grid">
+        <section class="card input-section">
+          <form id="ansimateForm">
+            <h2>Select</h2>
+            <div id="dropzone" class="dropzone">
+              <input type="file" id="filePicker" />
+              <div class="dropzone-prompt">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  width="36"
+                  height="36"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                  />
+                </svg>
+                <p>
+                  <strong> <span class="browse-link">Browse</span>, </strong>
+                  or drag &amp; drop an ANSI file
+                </p>
+              </div>
+              <div id="selectedFileInfo" class="file-info hidden"></div>
+            </div>
+            <br />
+            <h2>Configure</h2>
+            <p class="section-note">
+              <em>
+                Lower baud rates and higher FPS use more frames, taking longer
+                to render, and result in larger files
+              </em>
+            </p>
+            <div class="controls-grid">
+              <div class="control-group">
+                <label for="palette">Palette</label>
+                <select id="palette">
+                  <option value="vga" selected>VGA (Default)</option>
+                  <option value="mono">Monochrome</option>
+                  <option value="amber">Amber</option>
+                  <option value="green">Green</option>
+                </select>
+              </div>
+
+              <div class="control-group">
+                <label for="baudRate">Baud Rate</label>
+                <select id="baudRate">
+                  <option value="300">300</option>
+                  <option value="1200">1,200</option>
+                  <option value="2400">2,400</option>
+                  <option value="9600">9,600</option>
+                  <option value="19200" selected>19,200 (Default)</option>
+                  <option value="28800">28,800</option>
+                  <option value="57600">57,600</option>
+                  <option value="115200">115,200 (Max)</option>
+                </select>
+              </div>
+
+              <div class="control-group">
+                <label for="fps">FPS</label>
+                <input
+                  type="number"
+                  id="fps"
+                  value="20"
+                  step="5"
+                  min="5"
+                  max="70"
+                />
+              </div>
+
+              <div class="control-group">
+                <label for="delay">Loop Delay</label>
+                <input
+                  type="number"
+                  id="delay"
+                  value="2"
+                  step="1"
+                  min="1"
+                  max="10"
+                />
+              </div>
+
+              <div class="control-group checkbox-group">
+                <label>
+                  <input type="checkbox" id="cga" />
+                  <span>Use a chunkier 8x8 CGA font</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="reset" id="resetBtn" class="btn btn-secondary">
+                Reset
+              </button>
+            </div>
+            <div id="statusMessage" class="status-message hidden"></div>
+          </form>
+        </section>
+
+        <section class="card preview-section">
+          <h2>Preview and Download</h2>
+          <div id="previewContainer" class="preview-container empty">
+            <div id="previewLoading" class="preview-loading hidden">
+              <div class="spinner"></div>
+              <p>Rendering animation&hellip;</p>
+              <small>(Low baud rates take much longer to process)</small>
+            </div>
+            <div class="preview-placeholder">
+              <p>
+                Upload an ANSI file above to generate an animated WebP preview.
+              </p>
+            </div>
+            <img
+              id="previewImage"
+              class="preview-image hidden"
+              alt="WebP Preview"
+            />
+          </div>
+
+          <div id="resultMeta" class="result-meta hidden">
+            <div class="meta-row">
+              <span>Input Size:</span> <strong id="metaInputSize">-</strong>
+            </div>
+            <div class="meta-row">
+              <span>WebP Size:</span> <strong id="metaWebpSize">-</strong>
+            </div>
+            <div class="meta-row">
+              <span>Render Time:</span> <strong id="metaTime">-</strong>
+            </div>
+            <a
+              id="downloadBtn"
+              class="btn btn-success"
+              download="ansimation.webp"
+            >
+              Download .webp
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
