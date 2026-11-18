@@ -19,6 +19,7 @@
   const resultMeta = document.getElementById("resultMeta");
   const metaInputSize = document.getElementById("metaInputSize");
   const metaWebpSize = document.getElementById("metaWebpSize");
+  const metaPlaytime = document.getElementById("metaPlaytime");
   const metaTime = document.getElementById("metaTime");
   const downloadBtn = document.getElementById("downloadBtn");
 
@@ -27,6 +28,57 @@
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  // Parse total animation playtime (in seconds) and frame count from WebP container
+  function getWebpPlaytime(bytes) {
+    if (!bytes || bytes.length < 16) return null;
+
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (
+      bytes[0] !== 0x52 ||
+      bytes[1] !== 0x49 ||
+      bytes[2] !== 0x46 ||
+      bytes[3] !== 0x46 ||
+      bytes[8] !== 0x57 ||
+      bytes[9] !== 0x45 ||
+      bytes[10] !== 0x42 ||
+      bytes[11] !== 0x50
+    ) {
+      return null;
+    }
+
+    let offset = 12;
+    let totalMs = 0;
+    let frames = 0;
+
+    while (offset + 8 <= bytes.length) {
+      const fourcc = String.fromCharCode(
+        bytes[offset],
+        bytes[offset + 1],
+        bytes[offset + 2],
+        bytes[offset + 3]
+      );
+      const chunkSize = view.getUint32(offset + 4, true);
+      offset += 8;
+
+      if (fourcc === "ANMF" && offset + 15 <= bytes.length) {
+        frames++;
+        const durMs =
+          bytes[offset + 12] |
+          (bytes[offset + 13] << 8) |
+          (bytes[offset + 14] << 16);
+        totalMs += durMs;
+      }
+
+      offset += chunkSize + (chunkSize % 2);
+    }
+
+    if (frames === 0) return null;
+    return {
+      durationSec: (totalMs / 1000).toFixed(2),
+      frames,
+    };
   }
 
   // Initialize WebAssembly
@@ -133,6 +185,12 @@
 
       metaInputSize.textContent = formatBytes(currentFileBytes.length);
       metaWebpSize.textContent = formatBytes(webpBytes.length);
+      const playInfo = getWebpPlaytime(webpBytes);
+      if (playInfo) {
+        metaPlaytime.textContent = `${playInfo.durationSec}s (${playInfo.frames} frames)`;
+      } else {
+        metaPlaytime.textContent = "Static";
+      }
       metaTime.textContent = `${elapsed}s`;
       downloadBtn.href = activeBlobUrl;
       downloadBtn.download = `${currentFileName}.webp`;
@@ -170,6 +228,7 @@
     previewImage.classList.add("hidden");
     previewPlaceholder.classList.remove("hidden");
     resultMeta.classList.add("hidden");
+    metaPlaytime.textContent = "-";
     downloadBtn.removeAttribute("href");
   });
 

@@ -136,7 +136,10 @@
             <div id="previewLoading" class="preview-loading hidden">
               <div class="spinner"></div>
               <p>Rendering animation&hellip;</p>
-              <small>(Low baud rates take much longer to process)</small>
+              <small
+                >(Larger files and using low baud rates take much longer to
+                process)</small
+              >
             </div>
             <div class="preview-placeholder">
               <p>
@@ -152,13 +155,16 @@
 
           <div id="resultMeta" class="result-meta hidden">
             <div class="meta-row">
-              <span>Input Size:</span> <strong id="metaInputSize">-</strong>
+              <span>Input size:</span> <strong id="metaInputSize">-</strong>
             </div>
             <div class="meta-row">
-              <span>WebP Size:</span> <strong id="metaWebpSize">-</strong>
+              <span>WebP size:</span> <strong id="metaWebpSize">-</strong>
             </div>
             <div class="meta-row">
-              <span>Render Time:</span> <strong id="metaTime">-</strong>
+              <span>Playtime:</span> <strong id="metaPlaytime">-</strong>
+            </div>
+            <div class="meta-row">
+              <span>Render time:</span> <strong id="metaTime">-</strong>
             </div>
             <a
               id="downloadBtn"
@@ -170,6 +176,14 @@
           </div>
         </section>
       </main>
+
+      <footer>
+        <p class="subtitle">
+          Looking for some ANSI art, try
+          <a href="https://defacto2.net/files/ansi">Defacto2</a>, and
+          <a href="https://16colo.rs/tags/content/ansimation">16colo.rs</a>.
+        </p>
+      </footer>
     </div>
   </body>
 </html>

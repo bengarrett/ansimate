@@ -37,6 +37,15 @@ header {
   margin-bottom: 24px;
 }
 
+footer {
+  margin-top: 24px;
+}
+
+footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
 h1 {
   font-size: 2rem;
   font-weight: 700;
