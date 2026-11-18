@@ -178,6 +178,50 @@ func TestAnimateCGAEndDelay(t *testing.T) {
 	be.True(t, !imagesEqual(lastFrame.Image, lastFrameVGA.Image))
 }
 
+func TestAnimateDelayPaddingAndSAUCE(t *testing.T) {
+	t.Parallel()
+
+	// Scene 1 followed by 300 bytes of \x1b[s delay padding before Scene 2.
+	ansiBody := "\x1b[2J\x1b[1;1HScene 1" + strings.Repeat("\x1b[s", 100) + "\x1b[2J\x1b[1;1HScene 2"
+
+	sauce := make([]byte, 128)
+	copy(sauce[:5], "SAUCE")
+	copy(sauce[5:7], "00")
+	copy(sauce[7:42], "Test Title                         ")
+	sauce[94] = 1
+	sauce[95] = 2
+
+	withSAUCE := append([]byte(ansiBody+"\x1a"), sauce...)
+
+	cfg := &ansimate.Config{
+		BaudRate: 19200,
+		FPS:      20,
+		EndDelay: 500 * time.Millisecond,
+	}
+
+	var outClean, outSAUCE bytes.Buffer
+	be.Err(t, ansimate.Animate(&outClean, strings.NewReader(ansiBody), cfg), nil)
+	be.Err(t, ansimate.Animate(&outSAUCE, bytes.NewReader(withSAUCE), cfg), nil)
+
+	animClean, err := animation.DecodeBytes(outClean.Bytes())
+	be.Err(t, err, nil)
+	be.Err(t, animClean.DecodeFrames(), nil)
+
+	animSAUCE, err := animation.DecodeBytes(outSAUCE.Bytes())
+	be.Err(t, err, nil)
+	be.Err(t, animSAUCE.DecodeFrames(), nil)
+
+	// Scene 1 must hold for at least 3 ticks (150ms) across the \x1b[s padding.
+	be.Equal(t, len(animSAUCE.Frames), 2)
+	be.True(t, animSAUCE.Frames[0].Duration >= 150*time.Millisecond)
+
+	// Stripping trailing SAUCE means the final rendered frame matches the clean input identically.
+	be.True(t, imagesEqual(
+		animSAUCE.Frames[len(animSAUCE.Frames)-1].Image,
+		animClean.Frames[len(animClean.Frames)-1].Image,
+	))
+}
+
 func imagesEqual(a, b image.Image) bool {
 	if a == nil || b == nil {
 		return a == b

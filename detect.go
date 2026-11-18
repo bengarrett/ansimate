@@ -114,6 +114,19 @@ func DetectBlinkB(data []byte) bool {
 	return term.HasBlink()
 }
 
+func stripSAUCE(data []byte) []byte {
+	if len(data) >= sauceRecordLen {
+		if bytes.HasPrefix(data[len(data)-sauceRecordLen:], []byte("SAUCE")) {
+			data = data[:len(data)-sauceRecordLen]
+		} else if len(data) > sauceRecordLen && data[len(data)-sauceRecordLen-1] == asciiEOF &&
+			bytes.HasPrefix(data[len(data)-sauceRecordLen:], []byte("SAUCE")) {
+			data = data[:len(data)-sauceRecordLen-1]
+		}
+	}
+
+	return bytes.TrimRight(data, "\x00\x1a")
+}
+
 // binary reports whether data appears to be binary rather than text or ANSI art.
 // ANSI streams never contain null bytes (0x00) in the body, while binary formats do.
 func binary(data []byte) bool {
@@ -122,19 +135,9 @@ func binary(data []byte) bool {
 	}
 
 	// Strip trailing SAUCE record (128 bytes, optionally preceded by 0x1A EOF)
-	// because SAUCE binary fields may legitimately contain 0x00 bytes.
-	body := data
-	if len(body) >= sauceRecordLen {
-		if bytes.HasPrefix(body[len(body)-sauceRecordLen:], []byte("SAUCE")) {
-			body = body[:len(body)-sauceRecordLen]
-		} else if len(body) > sauceRecordLen && body[len(body)-sauceRecordLen-1] == asciiEOF &&
-			bytes.HasPrefix(body[len(body)-sauceRecordLen:], []byte("SAUCE")) {
-			body = body[:len(body)-sauceRecordLen-1]
-		}
-	}
-
-	// Strip trailing DOS EOF (0x1A) and sector padding (0x00, 0x20).
-	body = bytes.TrimRight(body, "\x00\x1a\x20")
+	// because SAUCE binary fields may legitimately contain 0x00 bytes,
+	// then strip trailing DOS EOF (0x1A) and sector padding (0x00, 0x20).
+	body := bytes.TrimRight(stripSAUCE(data), "\x20")
 
 	return bytes.IndexByte(body, asciiNUL) != -1
 }

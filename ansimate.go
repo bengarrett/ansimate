@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"image"
 	"image/color"
 	"io"
 	"time"
@@ -114,9 +115,14 @@ func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 		return ErrBinary
 	}
 
+	body := stripSAUCE(data)
+	if len(body) == 0 {
+		return ErrEmpty
+	}
+
 	if !DetectB(data) {
 		term := newTerminal(c.Columns, c.Rows)
-		_, _ = term.Write(data)
+		_, _ = term.Write(body)
 		if term.HasBlink() {
 			return c.animateBlink(w, term)
 		}
@@ -124,13 +130,15 @@ func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 
 	animation := c.animate(w)
 
-	return animation.run(bytes.NewReader(data))
+	return animation.run(bytes.NewReader(body))
 }
 
 type animator struct {
 	cfg          *Config
 	encoder      *animation.AnimEncoder
 	term         *terminal
+	pendingImg   *image.NRGBA
+	pendingDur   time.Duration
 	tick         time.Duration
 	bytesPerTick int
 	frames       int
@@ -237,10 +245,18 @@ func (a *animator) step(chunk []byte, bytesRead int) (time.Duration, error) {
 		return 0, err
 	}
 	if a.term.IsDirty() {
-		errAdd := a.addFrame(a.tick)
-		if errAdd != nil {
-			return 0, errAdd
+		if errFlush := a.flushPending(); errFlush != nil {
+			return 0, errFlush
 		}
+		a.pendingImg = drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
+		a.pendingDur = a.tick
+		a.term.ResetDirty()
+
+		return a.tick, nil
+	}
+
+	if a.pendingImg != nil {
+		a.pendingDur += a.tick
 
 		return a.tick, nil
 	}
@@ -260,50 +276,34 @@ func (a *animator) processChunk(chunk []byte, bytesRead int) error {
 	return nil
 }
 
-func (a *animator) addFrame(dur time.Duration) error {
-	img := drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
-	err := a.encoder.AddFrame(img, dur)
+func (a *animator) flushPending() error {
+	if a.pendingImg == nil {
+		return nil
+	}
+	err := a.encoder.AddFrame(a.pendingImg, a.pendingDur)
 	if err != nil {
 		return fmt.Errorf("add frame: %w", err)
 	}
 	a.frames++
-	a.term.ResetDirty()
+	a.pendingImg = nil
+	a.pendingDur = 0
 
 	return nil
 }
 
 func (a *animator) finalize() error {
-	if a.frames == 0 {
-		return a.finalizeEmpty()
+	if a.pendingImg == nil && a.frames == 0 {
+		return ErrEmpty
 	}
 
-	if a.cfg.EndDelay > 0 {
-		img := drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
-		err := a.encoder.AddFrame(img, a.cfg.EndDelay)
-		if err != nil {
-			return fmt.Errorf("add final delay: %w", err)
+	if a.pendingImg != nil {
+		a.pendingDur += a.cfg.EndDelay
+		if err := a.flushPending(); err != nil {
+			return err
 		}
 	}
 
 	err := a.encoder.Close()
-	if err != nil {
-		return fmt.Errorf("close encoder: %w", err)
-	}
-
-	return nil
-}
-
-func (a *animator) finalizeEmpty() error {
-	if !a.term.IsDirty() {
-		return ErrEmpty
-	}
-
-	err := a.addFrame(a.cfg.EndDelay)
-	if err != nil {
-		return err
-	}
-
-	err = a.encoder.Close()
 	if err != nil {
 		return fmt.Errorf("close encoder: %w", err)
 	}
