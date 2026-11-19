@@ -222,6 +222,74 @@ func TestAnimateDelayPaddingAndSAUCE(t *testing.T) {
 	))
 }
 
+func TestAnimateFrameAndFrame(t *testing.T) {
+	t.Parallel()
+
+	ansiData := strings.Join([]string{
+		"\x1b[2J\x1b[1;1HFrame 1",
+		"\x1b[2J\x1b[1;1HFrame 2",
+	}, "\r\n")
+
+	var out bytes.Buffer
+	cfg := &ansimate.Config{
+		BaudRate: 9600,
+		FPS:      10,
+		EndDelay: 500 * time.Millisecond,
+	}
+
+	gotAnimFrame, err := ansimate.AnimateFrame(&out, strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+	be.True(t, gotAnimFrame != nil)
+
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.Err(t, anim.DecodeFrames(), nil)
+	be.True(t, imagesEqual(gotAnimFrame, anim.Frames[len(anim.Frames)-1].Image))
+
+	gotFrame, err := ansimate.Frame(strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+	be.True(t, imagesEqual(gotFrame, gotAnimFrame))
+}
+
+func TestAnimateFrameBlink(t *testing.T) {
+	t.Parallel()
+
+	ansiData := "\x1b[2J\x1b[1;1HHello \x1b[5mBlink\x1b[0m!"
+	var out bytes.Buffer
+
+	got, err := ansimate.AnimateFrame(&out, strings.NewReader(ansiData), nil)
+	be.Err(t, err, nil)
+
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.Err(t, anim.DecodeFrames(), nil)
+	be.True(t, imagesEqual(got, anim.Frames[0].Image))
+
+	still, err := ansimate.Frame(strings.NewReader(ansiData), nil)
+	be.Err(t, err, nil)
+	be.True(t, imagesEqual(still, got))
+}
+
+func TestFrameErrors(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	_, err := ansimate.AnimateFrame(nil, strings.NewReader("hello"), nil)
+	be.Err(t, err, ansimate.ErrNilWriter)
+
+	_, err = ansimate.AnimateFrame(&buf, nil, nil)
+	be.Err(t, err, ansimate.ErrNilReader)
+
+	_, err = ansimate.Frame(nil, nil)
+	be.Err(t, err, ansimate.ErrNilReader)
+
+	_, err = ansimate.Frame(strings.NewReader(""), nil)
+	be.Err(t, err, ansimate.ErrEmpty)
+
+	_, err = ansimate.Frame(strings.NewReader("RIFF\x16\xd9\x00\x00WEBPVP8X"), nil)
+	be.Err(t, err, ansimate.ErrBinary)
+}
+
 func imagesEqual(a, b image.Image) bool {
 	if a == nil || b == nil {
 		return a == b

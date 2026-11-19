@@ -88,38 +88,61 @@ func (c *Config) sanitize() {
 	}
 }
 
-// Animate reads an ANSI animation from the reader and writes it as a WebP animation.
-// The writer and readers are required, while the config is optional and can be left as nil.
-func Animate(w io.Writer, r io.Reader, cfg *Config) error {
-	if w == nil {
-		return ErrNilWriter
-	}
-	if r == nil {
-		return ErrNilReader
-	}
-
-	c := Config{}
+func sanitizeConfig(cfg *Config) Config {
+	var c Config
 	if cfg != nil {
 		c = *cfg
 	}
 	c.sanitize()
 
+	return c
+}
+
+func readBody(r io.Reader) ([]byte, []byte, error) {
+	if r == nil {
+		return nil, nil, ErrNilReader
+	}
+
 	data, err := io.ReadAll(r)
 	if err != nil {
-		return fmt.Errorf("read: %w", err)
+		return nil, nil, fmt.Errorf("read: %w", err)
 	}
 	if len(data) == 0 {
-		return ErrEmpty
+		return nil, nil, ErrEmpty
 	}
 	if binary(data) {
-		return ErrBinary
+		return nil, nil, ErrBinary
 	}
 
 	body := stripSAUCE(data)
 	if len(body) == 0 {
-		return ErrEmpty
+		return nil, nil, ErrEmpty
 	}
 
+	return data, body, nil
+}
+
+// Animate reads an ANSI animation from the reader and writes it as a WebP animation.
+// The writer and readers are required, while the config is optional and can be left as nil.
+func Animate(w io.Writer, r io.Reader, cfg *Config) error {
+	_, err := AnimateFrame(w, r, cfg)
+
+	return err
+}
+
+// AnimateFrame reads an ANSI animation from r, writes the animated WebP to w,
+// and returns the final rendered frame as a static image.
+func AnimateFrame(w io.Writer, r io.Reader, cfg *Config) (image.Image, error) {
+	if w == nil {
+		return nil, ErrNilWriter
+	}
+
+	data, body, err := readBody(r)
+	if err != nil {
+		return nil, err
+	}
+
+	c := sanitizeConfig(cfg)
 	if !DetectB(data) {
 		term := newTerminal(c.Columns, c.Rows)
 		_, _ = term.Write(body)
@@ -133,11 +156,27 @@ func Animate(w io.Writer, r io.Reader, cfg *Config) error {
 	return animation.run(bytes.NewReader(body))
 }
 
+// Frame renders the final terminal state of an ANSI stream as a static image
+// without encoding an animation.
+func Frame(r io.Reader, cfg *Config) (image.Image, error) {
+	_, body, err := readBody(r)
+	if err != nil {
+		return nil, err
+	}
+
+	c := sanitizeConfig(cfg)
+	term := newTerminal(c.Columns, c.Rows)
+	_, _ = term.Write(body)
+
+	return drawScreenFont(term.Grid(), c.Palette, true, c.CGA), nil
+}
+
 type animator struct {
 	cfg          *Config
 	encoder      *animation.AnimEncoder
 	term         *terminal
 	pendingImg   *image.NRGBA
+	lastImg      *image.NRGBA
 	pendingDur   time.Duration
 	tick         time.Duration
 	bytesPerTick int
@@ -172,7 +211,7 @@ func (c *Config) animate(w io.Writer) *animator {
 	}
 }
 
-func (c *Config) animateBlink(w io.Writer, term *terminal) error {
+func (c *Config) animateBlink(w io.Writer, term *terminal) (image.Image, error) {
 	opts := &animation.EncodeOptions{
 		LoopCount:       0,
 		Lossless:        !c.Lossy,
@@ -186,24 +225,24 @@ func (c *Config) animateBlink(w io.Writer, term *terminal) error {
 	frameOn := drawScreenFont(term.Grid(), c.Palette, true, c.CGA)
 	err := encoder.AddFrame(frameOn, BlinkDelay)
 	if err != nil {
-		return fmt.Errorf("add blink frame on: %w", err)
+		return nil, fmt.Errorf("add blink frame on: %w", err)
 	}
 
 	frameOff := drawScreenFont(term.Grid(), c.Palette, false, c.CGA)
 	err = encoder.AddFrame(frameOff, BlinkDelay)
 	if err != nil {
-		return fmt.Errorf("add blink frame off: %w", err)
+		return nil, fmt.Errorf("add blink frame off: %w", err)
 	}
 
 	err = encoder.Close()
 	if err != nil {
-		return fmt.Errorf("close blink encoder: %w", err)
+		return nil, fmt.Errorf("close blink encoder: %w", err)
 	}
 
-	return nil
+	return frameOn, nil
 }
 
-func (a *animator) run(r io.Reader) error {
+func (a *animator) run(r io.Reader) (image.Image, error) {
 	buf := make([]byte, a.bytesPerTick)
 	var duration time.Duration
 	var bytesRead int
@@ -214,7 +253,7 @@ func (a *animator) run(r io.Reader) error {
 			bytesRead += n
 			added, errStep := a.step(buf[:n], bytesRead)
 			if errStep != nil {
-				return errStep
+				return nil, errStep
 			}
 			duration += added
 		}
@@ -224,7 +263,7 @@ func (a *animator) run(r io.Reader) error {
 				break
 			}
 
-			return fmt.Errorf("read: %w", err)
+			return nil, fmt.Errorf("read: %w", err)
 		}
 
 		if a.cfg.MaxDuration > 0 && duration >= a.cfg.MaxDuration {
@@ -233,7 +272,7 @@ func (a *animator) run(r io.Reader) error {
 	}
 
 	if bytesRead == 0 {
-		return ErrEmpty
+		return nil, ErrEmpty
 	}
 
 	return a.finalize()
@@ -245,7 +284,8 @@ func (a *animator) step(chunk []byte, bytesRead int) (time.Duration, error) {
 		return 0, err
 	}
 	if a.term.IsDirty() {
-		if errFlush := a.flushPending(); errFlush != nil {
+		errFlush := a.flushPending()
+		if errFlush != nil {
 			return 0, errFlush
 		}
 		a.pendingImg = drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
@@ -285,28 +325,30 @@ func (a *animator) flushPending() error {
 		return fmt.Errorf("add frame: %w", err)
 	}
 	a.frames++
+	a.lastImg = a.pendingImg
 	a.pendingImg = nil
 	a.pendingDur = 0
 
 	return nil
 }
 
-func (a *animator) finalize() error {
+func (a *animator) finalize() (image.Image, error) {
 	if a.pendingImg == nil && a.frames == 0 {
-		return ErrEmpty
+		return nil, ErrEmpty
 	}
 
 	if a.pendingImg != nil {
 		a.pendingDur += a.cfg.EndDelay
-		if err := a.flushPending(); err != nil {
-			return err
+		err := a.flushPending()
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	err := a.encoder.Close()
 	if err != nil {
-		return fmt.Errorf("close encoder: %w", err)
+		return nil, fmt.Errorf("close encoder: %w", err)
 	}
 
-	return nil
+	return a.lastImg, nil
 }
