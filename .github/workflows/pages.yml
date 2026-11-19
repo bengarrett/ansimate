@@ -11,6 +11,11 @@ on:
       - 'go.mod'
       - 'go.sum'
       - '.github/workflows/pages.yml'
+  workflow_run:
+    workflows:
+      - GoReleaser
+    types:
+      - completed
   workflow_dispatch:
 
 # Permissions required to publish to GitHub Pages
@@ -26,12 +31,16 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Go
         uses: actions/setup-go@v7

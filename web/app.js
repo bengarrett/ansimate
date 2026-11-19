@@ -22,6 +22,7 @@
   const metaPlaytime = document.getElementById("metaPlaytime");
   const metaTime = document.getElementById("metaTime");
   const downloadBtn = document.getElementById("downloadBtn");
+  const sampleLink = document.getElementById("sampleLink");
 
   // Format bytes into human readable string
   function formatBytes(bytes) {
@@ -146,6 +147,43 @@
       handleFile(e.target.files[0]);
     }
   });
+
+  if (sampleLink) {
+    let loadingSample = false;
+    sampleLink.addEventListener("click", async (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      if (loadingSample) return;
+      loadingSample = true;
+
+      try {
+        const fetchUrl = sampleLink.dataset.fetchUrl || sampleLink.href;
+        const response = await fetch(fetchUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const fileName = sampleLink.textContent.trim() || "CHAOS2.ANS";
+        const file = new File([blob], fileName, {
+          type: blob.type || "application/octet-stream",
+        });
+
+        if (typeof DataTransfer !== "undefined") {
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          filePicker.files = dt.files;
+        }
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        handleFile(file);
+      } catch {
+        window.location.assign(sampleLink.href);
+      } finally {
+        loadingSample = false;
+      }
+    });
+  }
 
   // Perform conversion
   async function triggerConvert() {
