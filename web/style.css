@@ -200,14 +200,24 @@ h2 {
 .btn-success {
   background-color: var(--success);
   color: #fff;
-  width: 100%;
-  padding: 12px;
+  padding: 12px 20px;
+  font-size: 1rem;
   font-weight: 600;
-  margin-top: 16px;
 }
 
 .btn-success:hover {
   background-color: var(--success-hover);
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.download-actions .btn {
+  flex: 1 1 180px;
 }
 
 /* Controls Grid */

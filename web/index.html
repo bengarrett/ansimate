@@ -17,13 +17,14 @@
         <p class="subtitle">
           Preview and convert BBS era, ANSI animations (ANSImations) into
           animated WebP images. But, you can also convert regular ANSI art to
-          display like on an old PC or MS-DOS terminal. And this is all done
-          locally on your machine.
+          display like on an old PC or MS-DOS terminal. And the animation
+          rendering is done locally on your machine.
           <a
             href="https://github.com/bengarrett/ansimate"
             target="_blank"
             rel="noopener"
-            >ANSImate is avaliable as a terminal app, WASM, and a Go package.</a
+            >ANSImate is also avaliable as a terminal app, WASM, and a Go
+            package.</a
           >
         </p>
         <code id="wasmStatus">Loading WASM...</code>
@@ -68,7 +69,7 @@
               <div class="control-group">
                 <label for="palette">Palette</label>
                 <select id="palette">
-                  <option value="vga" selected>VGA (Default)</option>
+                  <option value="vga" selected>VGA (default)</option>
                   <option value="mono">Monochrome</option>
                   <option value="amber">Amber</option>
                   <option value="green">Green</option>
@@ -76,16 +77,16 @@
               </div>
 
               <div class="control-group">
-                <label for="baudRate">Baud Rate</label>
+                <label for="baudRate">Baud rate</label>
                 <select id="baudRate">
                   <option value="300">300</option>
                   <option value="1200">1,200</option>
                   <option value="2400">2,400</option>
                   <option value="9600">9,600</option>
-                  <option value="19200" selected>19,200 (Default)</option>
+                  <option value="19200" selected>19,200 (default)</option>
                   <option value="28800">28,800</option>
                   <option value="57600">57,600</option>
-                  <option value="115200">115,200 (Max)</option>
+                  <option value="115200">115,200</option>
                 </select>
               </div>
 
@@ -102,7 +103,7 @@
               </div>
 
               <div class="control-group">
-                <label for="delay">Loop Delay</label>
+                <label for="delay">Loop delay</label>
                 <input
                   type="number"
                   id="delay"
@@ -131,7 +132,7 @@
         </section>
 
         <section class="card preview-section">
-          <h2>Preview and Download</h2>
+          <h2>Preview and download</h2>
           <div id="previewContainer" class="preview-container empty">
             <div id="previewLoading" class="preview-loading hidden">
               <div class="spinner"></div>
@@ -166,20 +167,29 @@
             <div class="meta-row">
               <span>Render time:</span> <strong id="metaTime">-</strong>
             </div>
-            <a
-              id="downloadBtn"
-              class="btn btn-success"
-              download="ansimation.webp"
-            >
-              Download .webp
-            </a>
+            <div class="download-actions">
+              <a
+                id="downloadBtn"
+                class="btn btn-success"
+                download="ansimation.webp"
+              >
+                Download the .webp animation
+              </a>
+              <a
+                id="downloadFrameBtn"
+                class="btn btn-secondary hidden"
+                download="ansimation-frame.webp"
+              >
+                Download a .webp still image
+              </a>
+            </div>
           </div>
         </section>
       </main>
 
       <footer>
         <p class="subtitle">
-          Grab
+          Use
           <a
             id="sampleLink"
             href="https://github.com/bengarrett/ansimate/raw/refs/heads/main/testdata/CHAOS2.ANS"

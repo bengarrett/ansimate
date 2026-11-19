@@ -4,6 +4,7 @@
   let currentFileBytes = null;
   let currentFileName = "ansimation";
   let activeBlobUrl = null;
+  let activeFrameBlobUrl = null;
 
   const ansimateForm = document.getElementById("ansimateForm");
   const wasmStatus = document.getElementById("wasmStatus");
@@ -22,6 +23,7 @@
   const metaPlaytime = document.getElementById("metaPlaytime");
   const metaTime = document.getElementById("metaTime");
   const downloadBtn = document.getElementById("downloadBtn");
+  const downloadFrameBtn = document.getElementById("downloadFrameBtn");
   const sampleLink = document.getElementById("sampleLink");
 
   // Format bytes into human readable string
@@ -208,7 +210,17 @@
     const startTime = performance.now();
 
     try {
-      const webpBytes = await globalThis.ansimate.convert(currentFileBytes, options);
+      let webpBytes;
+      let frameBytes = null;
+
+      if (typeof globalThis.ansimate.convertWithFrame === "function") {
+        const result = await globalThis.ansimate.convertWithFrame(currentFileBytes, options);
+        webpBytes = result.webp;
+        frameBytes = result.frame;
+      } else {
+        webpBytes = await globalThis.ansimate.convert(currentFileBytes, options);
+      }
+
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
 
       if (activeBlobUrl) {
@@ -216,6 +228,11 @@
       }
       const blob = new Blob([webpBytes], { type: "image/webp" });
       activeBlobUrl = URL.createObjectURL(blob);
+
+      if (activeFrameBlobUrl) {
+        URL.revokeObjectURL(activeFrameBlobUrl);
+        activeFrameBlobUrl = null;
+      }
 
       previewImage.src = activeBlobUrl;
       previewImage.classList.remove("hidden");
@@ -232,6 +249,18 @@
       metaTime.textContent = `${elapsed}s`;
       downloadBtn.href = activeBlobUrl;
       downloadBtn.download = `${currentFileName}.webp`;
+
+      if (frameBytes) {
+        const frameBlob = new Blob([frameBytes], { type: "image/webp" });
+        activeFrameBlobUrl = URL.createObjectURL(frameBlob);
+        downloadFrameBtn.href = activeFrameBlobUrl;
+        downloadFrameBtn.download = `${currentFileName}-frame.webp`;
+        downloadFrameBtn.classList.remove("hidden");
+      } else {
+        downloadFrameBtn.classList.add("hidden");
+        downloadFrameBtn.removeAttribute("href");
+      }
+
       resultMeta.classList.remove("hidden");
     } catch (err) {
       showStatus("Conversion error: " + err.message, "error");
@@ -262,12 +291,18 @@
       URL.revokeObjectURL(activeBlobUrl);
       activeBlobUrl = null;
     }
+    if (activeFrameBlobUrl) {
+      URL.revokeObjectURL(activeFrameBlobUrl);
+      activeFrameBlobUrl = null;
+    }
     previewImage.src = "";
     previewImage.classList.add("hidden");
     previewPlaceholder.classList.remove("hidden");
     resultMeta.classList.add("hidden");
     metaPlaytime.textContent = "-";
     downloadBtn.removeAttribute("href");
+    downloadFrameBtn.classList.add("hidden");
+    downloadFrameBtn.removeAttribute("href");
   });
 
   // Start initialization

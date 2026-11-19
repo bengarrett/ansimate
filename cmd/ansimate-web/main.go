@@ -7,11 +7,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"image"
 	"strings"
 	"syscall/js"
 	"time"
 
 	"github.com/bengarrett/ansimate"
+	"github.com/deepteams/webp"
 )
 
 var (
@@ -28,7 +30,9 @@ var (
 func main() {
 	ans := js.Global().Get("Object").New()
 	ans.Set("convert", js.FuncOf(convertPromise))
+	ans.Set("convertWithFrame", js.FuncOf(convertWithFramePromise))
 	ans.Set("convertSync", js.FuncOf(convertSync))
+	ans.Set("frame", js.FuncOf(framePromise))
 	ans.Set("detect", js.FuncOf(detect))
 	ans.Set("version", js.FuncOf(func(_ js.Value, _ []js.Value) any {
 		if date != "" {
@@ -44,6 +48,54 @@ func main() {
 }
 
 func convertPromise(_ js.Value, args []js.Value) any {
+	return runAsync(args, func(input []byte, cfg *ansimate.Config) (js.Value, error) {
+		var out bytes.Buffer
+		if err := ansimate.Animate(&out, bytes.NewReader(input), cfg); err != nil {
+			return js.Undefined(), fmt.Errorf("animate: %w", err)
+		}
+
+		return toUint8Array(out.Bytes()), nil
+	})
+}
+
+func convertWithFramePromise(_ js.Value, args []js.Value) any {
+	return runAsync(args, func(input []byte, cfg *ansimate.Config) (js.Value, error) {
+		var out bytes.Buffer
+		img, err := ansimate.AnimateFrame(&out, bytes.NewReader(input), cfg)
+		if err != nil {
+			return js.Undefined(), fmt.Errorf("animate frame: %w", err)
+		}
+
+		frameBytes, err := encodeStaticWebP(img, cfg)
+		if err != nil {
+			return js.Undefined(), err
+		}
+
+		res := js.Global().Get("Object").New()
+		res.Set("webp", toUint8Array(out.Bytes()))
+		res.Set("frame", toUint8Array(frameBytes))
+
+		return res, nil
+	})
+}
+
+func framePromise(_ js.Value, args []js.Value) any {
+	return runAsync(args, func(input []byte, cfg *ansimate.Config) (js.Value, error) {
+		img, err := ansimate.Frame(bytes.NewReader(input), cfg)
+		if err != nil {
+			return js.Undefined(), fmt.Errorf("frame: %w", err)
+		}
+
+		frameBytes, err := encodeStaticWebP(img, cfg)
+		if err != nil {
+			return js.Undefined(), err
+		}
+
+		return toUint8Array(frameBytes), nil
+	})
+}
+
+func runAsync(args []js.Value, fn func([]byte, *ansimate.Config) (js.Value, error)) any {
 	if len(args) == 0 {
 		return promiseReject(errNoInput)
 	}
@@ -71,19 +123,31 @@ func convertPromise(_ js.Value, args []js.Value) any {
 				return
 			}
 
-			var out bytes.Buffer
-			if err := ansimate.Animate(&out, bytes.NewReader(input), cfg); err != nil {
+			val, err := fn(input, cfg)
+			if err != nil {
 				reject.Invoke(js.Global().Get("Error").New(err.Error()))
 				return
 			}
 
-			resolve.Invoke(toUint8Array(out.Bytes()))
+			resolve.Invoke(val)
 		}()
 
 		return nil
 	})
 
 	return js.Global().Get("Promise").New(handler)
+}
+
+func encodeStaticWebP(img image.Image, cfg *ansimate.Config) ([]byte, error) {
+	opts := webp.DefaultOptions()
+	opts.Lossless = cfg == nil || !cfg.Lossy
+
+	var buf bytes.Buffer
+	if err := webp.Encode(&buf, img, opts); err != nil {
+		return nil, fmt.Errorf("encode frame: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func convertSync(_ js.Value, args []js.Value) any {
