@@ -7,7 +7,9 @@ import (
 	"net/http"
 )
 
+const port = "8070"
+
 func main() {
-	log.Println("Serving web/ at http://localhost:8080 (Ctrl+C to stop) ...")
-	log.Fatal(http.ListenAndServe(":8080", http.FileServer(http.Dir("web"))))
+	log.Println("Serving web/ at http://localhost:" + port + " (Ctrl+C to stop) ...")
+	log.Fatal(http.ListenAndServe(":"+port, http.FileServer(http.Dir("web"))))
 }
