@@ -290,6 +290,78 @@ func TestFrameErrors(t *testing.T) {
 	be.Err(t, err, ansimate.ErrBinary)
 }
 
+func TestAnimateWithBlinkPlaybackAndEndDelay(t *testing.T) {
+	t.Parallel()
+
+	// Animation that draws blinking text first, then spends >1.2s moving cursor without dirtying cells.
+	// At 2400 bps (300 bytes/sec), ~400 bytes takes ~1.33s (> 2x BlinkDelay).
+	padding := strings.Repeat("\x1b[1;1H", 60)
+	ansiData := "\x1b[2J\x1b[1;1H\x1b[5mBLINK\x1b[0m\x1b[2J\x1b[1;1H\x1b[5mBLINK\x1b[0m" + padding
+	be.Equal(t, ansimate.DetectB([]byte(ansiData)), true)
+
+	cfg := &ansimate.Config{
+		BaudRate: 2400,
+		FPS:      10,
+		EndDelay: 1200 * time.Millisecond,
+	}
+
+	var out bytes.Buffer
+	gotAnimFrame, err := ansimate.AnimateFrame(&out, strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.Err(t, anim.DecodeFrames(), nil)
+	be.True(t, len(anim.Frames) >= 4)
+
+	// Confirm the decoded animation contains both blink-on and blink-off frames.
+	seenDifferent := false
+	for i := 1; i < len(anim.Frames); i++ {
+		if !imagesEqual(anim.Frames[0].Image, anim.Frames[i].Image) {
+			seenDifferent = true
+			break
+		}
+	}
+	be.True(t, seenDifferent)
+
+	still, err := ansimate.Frame(strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+	be.True(t, imagesEqual(still, gotAnimFrame))
+}
+
+func TestAnimateBlinkAtEndDelayOnly(t *testing.T) {
+	t.Parallel()
+
+	// Blinking text introduced at EOF after cursor animation.
+	// EndDelay stops on a blink-off phase (533ms on, 533ms off -> stops at ~800ms),
+	// verifying both EndDelay blink slicing and that AnimateFrame still returns the ON image.
+	ansiData := "\x1b[2J\x1b[1;1HFrame1\x1b[2J\x1b[1;1HFrame2\x1b[1;1H\x1b[5mEND\x1b[0m"
+	be.Equal(t, ansimate.DetectB([]byte(ansiData)), true)
+
+	cfg := &ansimate.Config{
+		BaudRate: 57600,
+		FPS:      20,
+		EndDelay: 800 * time.Millisecond,
+	}
+
+	var out bytes.Buffer
+	gotAnimFrame, err := ansimate.AnimateFrame(&out, strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.Err(t, anim.DecodeFrames(), nil)
+	be.True(t, len(anim.Frames) >= 2)
+
+	last := anim.Frames[len(anim.Frames)-1].Image
+	prev := anim.Frames[len(anim.Frames)-2].Image
+	be.True(t, !imagesEqual(prev, last))
+
+	still, err := ansimate.Frame(strings.NewReader(ansiData), cfg)
+	be.Err(t, err, nil)
+	be.True(t, imagesEqual(still, gotAnimFrame))
+}
+
 func imagesEqual(a, b image.Image) bool {
 	if a == nil || b == nil {
 		return a == b

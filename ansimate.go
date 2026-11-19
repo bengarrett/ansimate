@@ -179,6 +179,8 @@ type animator struct {
 	lastImg      *image.NRGBA
 	pendingDur   time.Duration
 	tick         time.Duration
+	blinkElapsed time.Duration
+	blinkVisible bool
 	bytesPerTick int
 	frames       int
 }
@@ -206,6 +208,7 @@ func (c *Config) animate(w io.Writer) *animator {
 		encoder:      encoder,
 		term:         term,
 		tick:         tick,
+		blinkVisible: true,
 		bytesPerTick: bytesPerTick,
 		frames:       0,
 	}
@@ -283,12 +286,14 @@ func (a *animator) step(chunk []byte, bytesRead int) (time.Duration, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	blinkFlipped := a.advanceBlink()
 	if a.term.IsDirty() {
 		errFlush := a.flushPending()
 		if errFlush != nil {
 			return 0, errFlush
 		}
-		a.pendingImg = drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA)
+		a.pendingImg = drawScreenFont(a.term.Grid(), a.cfg.Palette, a.blinkVisible, a.cfg.CGA)
 		a.pendingDur = a.tick
 		a.term.ResetDirty()
 
@@ -296,12 +301,33 @@ func (a *animator) step(chunk []byte, bytesRead int) (time.Duration, error) {
 	}
 
 	if a.pendingImg != nil {
+		if blinkFlipped && a.term.HasBlink() {
+			if errFlush := a.flushPending(); errFlush != nil {
+				return 0, errFlush
+			}
+			a.pendingImg = drawScreenFont(a.term.Grid(), a.cfg.Palette, a.blinkVisible, a.cfg.CGA)
+			a.pendingDur = a.tick
+
+			return a.tick, nil
+		}
 		a.pendingDur += a.tick
 
 		return a.tick, nil
 	}
 
 	return 0, nil
+}
+
+func (a *animator) advanceBlink() bool {
+	a.blinkElapsed += a.tick
+	flipped := false
+	for a.blinkElapsed >= BlinkDelay {
+		a.blinkElapsed -= BlinkDelay
+		a.blinkVisible = !a.blinkVisible
+		flipped = true
+	}
+
+	return flipped
 }
 
 func (a *animator) processChunk(chunk []byte, bytesRead int) error {
@@ -338,17 +364,50 @@ func (a *animator) finalize() (image.Image, error) {
 	}
 
 	if a.pendingImg != nil {
-		a.pendingDur += a.cfg.EndDelay
-		err := a.flushPending()
-		if err != nil {
-			return nil, err
+		if a.cfg.EndDelay > 0 && a.term.HasBlink() {
+			if err := a.finalizeWithBlink(); err != nil {
+				return nil, err
+			}
+		} else {
+			a.pendingDur += a.cfg.EndDelay
+			if err := a.flushPending(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	err := a.encoder.Close()
-	if err != nil {
+	if err := a.encoder.Close(); err != nil {
 		return nil, fmt.Errorf("close encoder: %w", err)
 	}
 
+	if a.term.HasBlink() && !a.blinkVisible {
+		return drawScreenFont(a.term.Grid(), a.cfg.Palette, true, a.cfg.CGA), nil
+	}
+
 	return a.lastImg, nil
+}
+
+func (a *animator) finalizeWithBlink() error {
+	remaining := a.cfg.EndDelay
+	phaseLeft := BlinkDelay - a.blinkElapsed
+	chunk := min(remaining, phaseLeft)
+
+	a.pendingDur += chunk
+	remaining -= chunk
+	if err := a.flushPending(); err != nil {
+		return err
+	}
+
+	for remaining > 0 {
+		a.blinkVisible = !a.blinkVisible
+		chunk = min(remaining, BlinkDelay)
+		a.pendingImg = drawScreenFont(a.term.Grid(), a.cfg.Palette, a.blinkVisible, a.cfg.CGA)
+		a.pendingDur = chunk
+		remaining -= chunk
+		if err := a.flushPending(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
