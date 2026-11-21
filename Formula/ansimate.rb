@@ -1,9 +1,9 @@
 class Ansimate < Formula
   desc "Take ANSI streams and transform them into compact WebP animations"
   homepage "https://github.com/bengarrett/ansimate"
-  url "https://github.com/bengarrett/ansimate/archive/refs/tags/v1.2.0.tar.gz"
-  sha256 "50e15f3371ddf10c1f5e9f493c126d316a7dc3185e6b6f25ab727ef6eb7d8fbf"
-  version "1.2.0"
+  url "https://github.com/bengarrett/ansimate/archive/refs/tags/v1.2.1.tar.gz"
+  sha256 "57e9cae1ef00786fec8a1db1c1adfa593517dade592e34939ebb257c03a12e3a"
+  version "1.2.1"
   license "MIT"
 
   livecheck do
