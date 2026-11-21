@@ -125,16 +125,48 @@ if ok {
 
 ```go
 cfg := &ansimate.Config{
-	BaudRate:    14400,                  // 14.4k baud modem speed
-	FPS:         20,                     // 20 frames per second
-	MaxDuration: 10 * time.Second,       // Cap animation at 10s
-	EndDelay:    3 * time.Second,        // Hold final completed frame for 3s
-	Lossy:       true,                   // Use lossy image compression, but it is not recommended
-	Palette:     ansimate.PaletteMono,   // Or PaletteAmber, PaletteGreen, PaletteVGA
+  BaudRate:    14400,                  // 14.4k baud modem speed
+  FPS:         20,                     // 20 frames per second
+  MaxDuration: 10 * time.Second,       // Crop/Cap animation to 10 seconds
+  EndDelay:    3 * time.Second,        // Hold the last frame for 3 seconds to create a pause
+  Columns:     80,                     // Standard MS-DOS number of characters per line
+  Rows:        25,                     // Standard MS-DOS number of lines on the screen
+  Lossy:       true,                   // Use lossy image compression, not recommended
+  CGA:         false,                  // Do not use the CGA 8x8 font
+  Palette:     ansimate.PaletteMono,   // Use monochrome output,
+                                       // or swap to PaletteAmber, PaletteGreen, PaletteVGA
 }
 
 err := ansimate.Animate(output, input, cfg)
 ```
+
+#### Animated PNG (APNG) or animated GIF Support
+
+To keep this package small and targeted, ANSImate only supports WebP.
+While you can convert these animations into legacy formats using [ImageMagick](https://imagemagick.org/),
+the tool can suffer from dependency dramas and the animations do balloon in size.
+
+```sh
+cd testdata/
+
+# webp to gif
+magick CHAOS2.webp CHAOS2.gif
+
+# webp to apng
+magick CHAOS2.webp -coalesce APNG:CHAOS2.png
+
+# list the byte file sizes of CHAOS2
+stat -c '%-12n %s' CHAOS2.*
+CHAOS2.ANS   19426
+CHAOS2.webp  55582
+CHAOS2.gif   249387
+CHAOS2.png   1176224
+```
+
+#### Limitations
+
+To keep this package small and concise, there is only one character set
+the original IBM CP-437. And only two font choices.
 
 #### Similar Projects
 
@@ -153,3 +185,7 @@ Just remember, many of these works were by edgy or nerd kids and young adults of
 This project is licensed under the [MIT License](LICENSE).
 
 Test artwork files located in `testdata/` remain the copyright of their respective authors and are included strictly for automated regression testing and format conformance. See [testdata/README.md](testdata/README.md) for full attributions.
+
+```
+
+```
