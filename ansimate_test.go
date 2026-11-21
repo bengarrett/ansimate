@@ -78,11 +78,49 @@ func TestAnimateBlink(t *testing.T) {
 	be.Err(t, err, nil)
 	be.True(t, out.Len() > 0)
 
-	// Verify it generated exactly a 2-frame infinite loop animation
+	// Verify it generated a looping animation with both blink-on and blink-off frames
 	anim, err := animation.DecodeBytes(out.Bytes())
 	be.Err(t, err, nil)
+	be.Err(t, anim.DecodeFrames(), nil)
 	be.Equal(t, anim.LoopCount, 0)
-	be.Equal(t, len(anim.Frames), 2)
+	be.True(t, len(anim.Frames) >= 2)
+
+	seenDifferent := false
+	for i := 1; i < len(anim.Frames); i++ {
+		if !imagesEqual(anim.Frames[0].Image, anim.Frames[i].Image) {
+			seenDifferent = true
+			break
+		}
+	}
+	be.True(t, seenDifferent)
+}
+
+func TestAnimateStaticScrollWithBlink(t *testing.T) {
+	t.Parallel()
+	// Static ANSI stream taller than 25 rows with blinking text should stream and scroll,
+	// rather than jumping straight to a 2-frame static blink loop.
+	var sb strings.Builder
+	sb.WriteString("\x1b[2J\x1b[1;1H\x1b[5mBLINKING HEADER\x1b[0m\r\n")
+	for range 35 {
+		sb.WriteString("Static scrolling line of ANSI text...\r\n")
+	}
+	sb.WriteString("\x1b[5mBLINKING FOOTER\x1b[0m\r\n")
+
+	be.Equal(t, ansimate.DetectB([]byte(sb.String())), false)
+	be.Equal(t, ansimate.DetectBlinkB([]byte(sb.String())), true)
+
+	var out bytes.Buffer
+	cfg := &ansimate.Config{
+		BaudRate: 19200,
+		FPS:      20,
+		EndDelay: 1 * time.Second,
+	}
+	err := ansimate.Animate(&out, strings.NewReader(sb.String()), cfg)
+	be.Err(t, err, nil)
+
+	anim, err := animation.DecodeBytes(out.Bytes())
+	be.Err(t, err, nil)
+	be.True(t, len(anim.Frames) > 10)
 }
 
 func TestAnimateCustomDimensions(t *testing.T) {

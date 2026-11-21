@@ -98,28 +98,28 @@ func sanitizeConfig(cfg *Config) Config {
 	return c
 }
 
-func readBody(r io.Reader) ([]byte, []byte, error) {
+func readBody(r io.Reader) ([]byte, error) {
 	if r == nil {
-		return nil, nil, ErrNilReader
+		return nil, ErrNilReader
 	}
 
 	data, err := io.ReadAll(r)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read: %w", err)
+		return nil, fmt.Errorf("read: %w", err)
 	}
 	if len(data) == 0 {
-		return nil, nil, ErrEmpty
+		return nil, ErrEmpty
 	}
 	if binary(data) {
-		return nil, nil, ErrBinary
+		return nil, ErrBinary
 	}
 
 	body := stripSAUCE(data)
 	if len(body) == 0 {
-		return nil, nil, ErrEmpty
+		return nil, ErrEmpty
 	}
 
-	return data, body, nil
+	return body, nil
 }
 
 // Animate reads an ANSI animation from the reader and writes it as a WebP animation.
@@ -137,20 +137,12 @@ func AnimateFrame(w io.Writer, r io.Reader, cfg *Config) (image.Image, error) {
 		return nil, ErrNilWriter
 	}
 
-	data, body, err := readBody(r)
+	body, err := readBody(r)
 	if err != nil {
 		return nil, err
 	}
 
 	c := sanitizeConfig(cfg)
-	if !DetectB(data) {
-		term := newTerminal(c.Columns, c.Rows)
-		_, _ = term.Write(body)
-		if term.HasBlink() {
-			return c.animateBlink(w, term)
-		}
-	}
-
 	animation := c.animate(w)
 
 	return animation.run(bytes.NewReader(body))
@@ -159,7 +151,7 @@ func AnimateFrame(w io.Writer, r io.Reader, cfg *Config) (image.Image, error) {
 // Frame renders the final terminal state of an ANSI stream as a static image
 // without encoding an animation.
 func Frame(r io.Reader, cfg *Config) (image.Image, error) {
-	_, body, err := readBody(r)
+	body, err := readBody(r)
 	if err != nil {
 		return nil, err
 	}
@@ -212,37 +204,6 @@ func (c *Config) animate(w io.Writer) *animator {
 		bytesPerTick: bytesPerTick,
 		frames:       0,
 	}
-}
-
-func (c *Config) animateBlink(w io.Writer, term *terminal) (image.Image, error) {
-	opts := &animation.EncodeOptions{
-		LoopCount:       0,
-		Lossless:        !c.Lossy,
-		BackgroundColor: c.Palette[0],
-	}
-
-	canvasW := c.Columns * glyphW
-	canvasH := c.Rows * glyphH
-	encoder := animation.NewEncoder(w, canvasW, canvasH, opts)
-
-	frameOn := drawScreenFont(term.Grid(), c.Palette, true, c.CGA)
-	err := encoder.AddFrame(frameOn, BlinkDelay)
-	if err != nil {
-		return nil, fmt.Errorf("add blink frame on: %w", err)
-	}
-
-	frameOff := drawScreenFont(term.Grid(), c.Palette, false, c.CGA)
-	err = encoder.AddFrame(frameOff, BlinkDelay)
-	if err != nil {
-		return nil, fmt.Errorf("add blink frame off: %w", err)
-	}
-
-	err = encoder.Close()
-	if err != nil {
-		return nil, fmt.Errorf("close blink encoder: %w", err)
-	}
-
-	return frameOn, nil
 }
 
 func (a *animator) run(r io.Reader) (image.Image, error) {
