@@ -11,12 +11,12 @@ ANSImate converts continuous ANSI streams (ANSImations) found in the PC BBS and 
 - Emulates BBS streaming transmission rates and frame ticks.
 - Lossless animated WebP output.
 - Heuristic and SAUCE detection to distinguish dynamic animations from regular ANSI artworks.
-- MS-DOS, ANSI.SYS terminal support including cursor positioning, movements (`CSI A-D`), screen/line clearing, and SGR colors.
+- MS-DOS, ANSI.SYS terminal support including cursor positioning, movements, screen/line clearing, and SGR colors.
 - WebAssembly support for standalone runtimes and browser client-side conversion.
 
 #### ANSImation?
 
-ANSI escape codes are a terminal standard that goes back to minicomputers of the late 1970s. On 16-bit microcomputers, it became popular on online bulletin boards later in the 1980s. This allowed boards to offer color, cursor movement, and overall more striking user interfaces, though it came at the expense of complexity. The creators of these interfaces evolved into artists drawing adverts for these bulletin boards, and popular drawing tools of the era like [The Draw](https://winworldpc.com/product/the-draw/3x) allowed for the creation of streaming ANSI art files, to display the artwork onscreen as they were downloaded over slow, copper telephone lines.
+ANSI escape codes are a terminal standard that goes back to minicomputers of the late 1970s. On 16-bit microcomputers, it became popular on online bulletin boards later in the 1980s. This allowed boards to offer color, cursor movement, and overall more striking user interfaces, though it came at the expense of complexity. The creators of these interfaces evolved into artists drawing adverts for these bulletin boards, and popular drawing tools of the era like [TheDraw](https://winworldpc.com/product/the-draw/3x) allowed for the creation of streaming ANSI art files, to display the artwork onscreen as they were downloaded over slow, copper telephone lines.
 
 We first started seeing ANSI artists using the blink character options to add visual movement to their otherwise static art. And I would guess this evolved into exploring the ability to control the text cursor movement to generate animations. These animations initially started as TV and movie-style screen wipes and later expanded in complexity into moving adverts and animated comic strips, and these became known as ANSImations (sometimes styled with a lowercase i).
 
@@ -72,7 +72,7 @@ go build .
 wasmtime run --dir=. ansimate.wasm -- input.ans output.webp
 ```
 
-`ansimate-web.wasm` can be combined with JS for use in web browsers. See [cmd/ansimate-web/README](cmd/ansimate-web/README.md)).
+`ansimate-web.wasm` can be combined with JS for use in web browsers. See [ansimate-web/README](cmd/ansimate-web/README.md).
 
 And, [there is also the live demo](https://bengarrett.github.io/ansimate/).
 
@@ -165,7 +165,7 @@ CHAOS2.png   1176224
 
 #### Limitations
 
-To keep this package small and concise, there is only one character set
+To keep this package small and concise, there is only one character set,
 the original IBM CP-437. And only two font choices.
 
 #### Similar Projects
